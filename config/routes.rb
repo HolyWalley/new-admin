@@ -5,7 +5,7 @@ NewAdmin::Engine.routes.draw do
   get "pages/*path", to: "custom_pages#show"
 
   resources :resources, path: ":model_name", only: [:index, :show, :new, :create, :edit, :update, :destroy],
-    constraints: { model_name: /[a-z][a-z0-9_]*/ } do
+    constraints: { model_name: /[a-z][a-z0-9_~]*/ } do
     member do
       get :delete_confirmation
     end

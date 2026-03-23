@@ -201,4 +201,22 @@ pages_data.each do |data|
 end
 puts "  Created #{Page.count} pages"
 
+# Blog (namespaced models)
+8.times do
+  article = Blog::Article.create!(
+    title: Faker::Lorem.sentence(word_count: rand(4..8)),
+    body: Faker::Lorem.paragraphs(number: rand(3..6)).join("\n\n"),
+    status: %w[draft published archived].sample,
+    user: users.sample
+  )
+  rand(0..3).times do
+    Blog::ArticleComment.create!(
+      body: Faker::Lorem.paragraph(sentence_count: rand(1..3)),
+      article: article,
+      user: users.sample
+    )
+  end
+end
+puts "  Created #{Blog::Article.count} blog articles with #{Blog::ArticleComment.count} comments"
+
 puts "Done! Login with admin@example.com / password"

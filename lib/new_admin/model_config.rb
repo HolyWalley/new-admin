@@ -13,7 +13,7 @@ module NewAdmin
     end
 
     def param_key
-      name.underscore
+      name.underscore.tr("/", "~")
     end
 
     def table_name
