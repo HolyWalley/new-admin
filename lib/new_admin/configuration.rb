@@ -5,6 +5,7 @@ module NewAdmin
     attr_reader :model_configurations, :authentication_block, :current_user_proc,
                 :authorization_adapter_name, :authorization_block, :custom_script_paths,
                 :navigation_config
+    attr_accessor :app_name, :app_version
 
     def initialize
       @model_configurations = {}
@@ -14,6 +15,8 @@ module NewAdmin
       @authorization_block = nil
       @custom_script_paths = []
       @navigation_config = nil
+      @app_name = "NewAdmin"
+      @app_version = nil
     end
 
     # Register a script to load after new_admin's main JS bundle.

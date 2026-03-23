@@ -36,6 +36,8 @@ module NewAdmin
           summary
         end,
         flash: { success: flash[:notice], error: flash[:alert] }.compact,
+        app_name: config.app_name,
+        app_version: config.app_version,
       }
 
       # Pass navigation groups if configured

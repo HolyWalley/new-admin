@@ -284,5 +284,7 @@ export interface SharedProps {
   current_user?: CurrentUser;
   flash?: Flash;
   navigation?: { groups: NavigationGroup[] } | null;
+  app_name?: string;
+  app_version?: string | null;
   [key: string]: unknown;
 }

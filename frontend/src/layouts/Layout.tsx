@@ -397,6 +397,7 @@ function CollapsibleNamespaceGroup({
 
 function SidebarHeaderMenu({ isDashboard }: { isDashboard: boolean }) {
   const { open } = useSidebar();
+  const { props: sharedProps } = usePage<SharedProps>();
   const pages = Object.entries(getAllPages());
 
   return (
@@ -413,8 +414,8 @@ function SidebarHeaderMenu({ isDashboard }: { isDashboard: boolean }) {
           {open && (
             <>
               <div className="flex-1 truncate">
-                <div className="text-sm font-semibold leading-tight">NewAdmin</div>
-                <div className="text-[11px] font-normal text-sidebar-foreground/50 leading-tight">v0.1.0</div>
+                <div className="text-sm font-semibold leading-tight">{sharedProps.app_name || "NewAdmin"}</div>
+                {sharedProps.app_version && <div className="text-[11px] font-normal text-sidebar-foreground/50 leading-tight">{sharedProps.app_version}</div>}
               </div>
               <ChevronsUpDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0" />
             </>
