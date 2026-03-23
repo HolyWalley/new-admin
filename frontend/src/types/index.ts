@@ -50,6 +50,14 @@ export interface ModelMeta {
   attachment_attributes: Array<{ name: string; multiple: boolean }>;
 }
 
+export interface Permissions {
+  list: boolean;
+  show: boolean;
+  create: boolean;
+  update: boolean;
+  destroy: boolean;
+}
+
 export interface ModelSummary {
   name: string;
   param_key: string;
@@ -57,6 +65,7 @@ export interface ModelSummary {
   navigation_group?: string | null;
   sti?: boolean;
   sti_base?: boolean;
+  permissions?: Permissions;
 }
 
 export type RecordData = Record<string, unknown> & {

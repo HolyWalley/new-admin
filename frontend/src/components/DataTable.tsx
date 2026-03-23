@@ -4,7 +4,7 @@ import { ArrowUp, ArrowDown, ArrowUpDown, Eye, Pencil, Trash2, Check, X } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo } from "@/types";
+import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo, Permissions } from "@/types";
 import { FileIcon } from "lucide-react";
 
 interface BelongsToData {
@@ -27,6 +27,7 @@ interface DataTableProps {
   search?: string;
   filters?: FilterRule[];
   onCellFilter?: (column: string, operator: string, value: string) => void;
+  permissions?: Permissions;
 }
 
 export function serializeFilters(params: Record<string, string>, filters: FilterRule[]) {
@@ -43,6 +44,7 @@ export function DataTable({
   associations, attachmentAttributes,
   bulkSelectable, selectedIds, onSelectionChange,
   search, filters, onCellFilter,
+  permissions,
 }: DataTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number | string; displayName: string } | null>(null);
   const visibleColumns = columns.filter(
@@ -292,20 +294,24 @@ export function DataTable({
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                     </Link>
-                    <Link href={`/new-admin/${modelParamKey}/${record.id}/edit`}>
-                      <Button variant="ghost" size="icon-sm" title="Edit">
-                        <Pencil className="h-3.5 w-3.5" />
+                    {permissions?.update !== false && (
+                      <Link href={`/new-admin/${modelParamKey}/${record.id}/edit`}>
+                        <Button variant="ghost" size="icon-sm" title="Edit">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    )}
+                    {permissions?.destroy !== false && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title="Delete"
+                        onClick={() => handleDelete(record)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      title="Delete"
-                      onClick={() => handleDelete(record)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    )}
                   </div>
                 </td>
               </tr>

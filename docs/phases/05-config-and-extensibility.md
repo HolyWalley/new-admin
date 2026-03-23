@@ -90,7 +90,7 @@ end
 
 ---
 
-### 5b — Authentication & Authorization (NOT STARTED)
+### 5b — Authentication & Authorization (DONE)
 
 Critical for real-world deployment. Depends on 5a DSL infrastructure.
 

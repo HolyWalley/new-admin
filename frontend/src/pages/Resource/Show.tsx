@@ -5,7 +5,7 @@ import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo } from "@/types";
+import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo, Permissions } from "@/types";
 import { FileIcon } from "lucide-react";
 
 interface Props {
@@ -13,9 +13,10 @@ interface Props {
   record: RecordData;
   associations: AssociationData[];
   view_columns?: ColumnDef[];
+  permissions?: Permissions;
 }
 
-function ResourceShow({ model, record, associations, view_columns }: Props) {
+function ResourceShow({ model, record, associations, view_columns, permissions }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Map foreign key column names to their belongs_to association
@@ -42,16 +43,20 @@ function ResourceShow({ model, record, associations, view_columns }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/new-admin/${model.param_key}/${record.id}/edit`}>
-            <Button variant="outline">
-              <Pencil />
-              Edit
+          {permissions?.update !== false && (
+            <Link href={`/new-admin/${model.param_key}/${record.id}/edit`}>
+              <Button variant="outline">
+                <Pencil />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {permissions?.destroy !== false && (
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 />
+              Delete
             </Button>
-          </Link>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 />
-            Delete
-          </Button>
+          )}
         </div>
       </div>
 

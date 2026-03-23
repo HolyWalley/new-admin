@@ -8,7 +8,7 @@ import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterPanel } from "@/components/FilterPanel";
 import { BulkDeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule, ColumnDef } from "@/types";
+import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule, ColumnDef, Permissions } from "@/types";
 
 interface Props {
   model: ModelMeta;
@@ -18,9 +18,10 @@ interface Props {
   search: string;
   filters: FilterRule[];
   view_columns?: ColumnDef[];
+  permissions?: Permissions;
 }
 
-function ResourceIndex({ model, records, pagination, sort, search, filters, view_columns }: Props) {
+function ResourceIndex({ model, records, pagination, sort, search, filters, view_columns, permissions }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
@@ -62,12 +63,14 @@ function ResourceIndex({ model, records, pagination, sort, search, filters, view
             {pagination.total} {pagination.total === 1 ? "record" : "records"}
           </p>
         </div>
-        <Link href={`/new-admin/${model.param_key}/new`}>
-          <Button>
-            <Plus />
-            Add new
-          </Button>
-        </Link>
+        {permissions?.create !== false && (
+          <Link href={`/new-admin/${model.param_key}/new`}>
+            <Button>
+              <Plus />
+              Add new
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex items-start gap-4">
@@ -94,15 +97,16 @@ function ResourceIndex({ model, records, pagination, sort, search, filters, view
         modelName={model.name}
         associations={model.associations}
         attachmentAttributes={model.attachment_attributes}
-        bulkSelectable
+        bulkSelectable={permissions?.destroy !== false}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         search={search}
         filters={filters}
         onCellFilter={handleCellFilter}
+        permissions={permissions}
       />
 
-      {selectedIds.size > 0 && (
+      {permissions?.destroy !== false && selectedIds.size > 0 && (
         <div className="sticky bottom-4 flex items-center gap-3 rounded-lg border border-border bg-background p-3 shadow-lg">
           <span className="text-sm font-medium">
             {selectedIds.size} {selectedIds.size === 1 ? "item" : "items"} selected

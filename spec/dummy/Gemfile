@@ -57,6 +57,7 @@ group :development do
 end
 
 gem "devise"
+gem "pundit"
 gem "rails_admin", github: "railsadminteam/rails_admin", branch: "master"
 gem "faker"
 gem "cssbundling-rails"

@@ -4,6 +4,7 @@ module NewAdmin
   class ResourcesController < ApplicationController
     before_action :set_model_config
     before_action :set_record, only: [:show, :edit, :update, :destroy, :delete_confirmation]
+    before_action :authorize_resource!
 
     inertia_share do
       { current_model: @model_config&.name }
@@ -67,6 +68,7 @@ module NewAdmin
         sort: { column: sort_column, direction: sort_direction },
         search: params[:q].to_s,
         filters: sanitized_filters,
+        permissions: authorization_adapter.permissions_for(@model_config.model),
       }
     end
 
@@ -76,6 +78,11 @@ module NewAdmin
         view_columns: resolved_columns_for(:show),
         record: serialize_record_for_show(@record),
         associations: serialize_associations(@record),
+        permissions: {
+          show: can?(:show, @record),
+          update: can?(:update, @record),
+          destroy: can?(:destroy, @record),
+        },
       }
     end
 
@@ -251,6 +258,26 @@ module NewAdmin
         cascades: cascades,
         restrict: restrict,
       }
+    end
+
+    ACTION_TO_PERMISSION = {
+      "index"               => :list,
+      "show"                => :show,
+      "new"                 => :create,
+      "create"              => :create,
+      "edit"                => :update,
+      "update"              => :update,
+      "destroy"             => :destroy,
+      "bulk_destroy"        => :destroy,
+      "delete_confirmation" => :destroy,
+    }.freeze
+
+    def authorize_resource!
+      permission = ACTION_TO_PERMISSION[action_name]
+      return unless permission
+
+      subject = @record || @model_config.model
+      authorize_action!(permission, subject)
     end
 
     def set_model_config

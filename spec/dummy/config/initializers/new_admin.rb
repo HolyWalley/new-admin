@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 NewAdmin.config do |config|
+  # Authentication: require login via Devise/Warden
+  config.authenticate_with { warden.authenticate! scope: :user }
+  config.current_user_method(&:current_user)
+
+  # Authorization: use Pundit policies
+  config.authorize_with :pundit
+
   config.model "Order" do
     list do
       field :number
