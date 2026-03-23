@@ -45,7 +45,25 @@ export interface CustomActionProps {
 export interface CustomActionConfig {
   label: string;
   icon?: string;
-  component: React.ComponentType<CustomActionProps>;
+  component?: React.ComponentType<CustomActionProps>;
+}
+
+export interface ServerActionConfig {
+  name: string;
+  scope: "member" | "collection";
+  icon: string | null;
+  label: string;
+  confirm: string | null;
+  display: "inline" | "modal" | "page";
+  http_methods: string[];
+  has_handler: boolean;
+}
+
+export interface MergedActionConfig {
+  label: string;
+  icon?: string | null;
+  component?: React.ComponentType<CustomActionProps>;
+  server?: ServerActionConfig;
 }
 
 export interface AssociationDef {

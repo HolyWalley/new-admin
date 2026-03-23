@@ -8,7 +8,8 @@ import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterPanel } from "@/components/FilterPanel";
 import { BulkDeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule, ColumnDef, Permissions } from "@/types";
+import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule, ColumnDef, Permissions, ServerActionConfig } from "@/types";
+import { DefaultActionButton } from "@/components/DefaultActionButton";
 
 interface Props {
   model: ModelMeta;
@@ -19,11 +20,14 @@ interface Props {
   filters: FilterRule[];
   view_columns?: ColumnDef[];
   permissions?: Permissions;
+  actions?: ServerActionConfig[];
 }
 
-function ResourceIndex({ model, records, pagination, sort, search, filters, view_columns, permissions }: Props) {
+function ResourceIndex({ model, records, pagination, sort, search, filters, view_columns, permissions, actions }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const memberActions = (actions ?? []).filter((a) => a.scope === "member");
+  const collectionActions = (actions ?? []).filter((a) => a.scope === "collection");
 
   function handleBulkDelete() {
     if (selectedIds.size === 0) return;
@@ -89,6 +93,19 @@ function ResourceIndex({ model, records, pagination, sort, search, filters, view
         onChange={handleFilterChange}
       />
 
+      {collectionActions.length > 0 && (
+        <div className="flex items-center gap-2">
+          {collectionActions.map((action) => (
+            <DefaultActionButton
+              key={action.name}
+              modelParamKey={model.param_key}
+              modelName={model.name}
+              actionConfig={action}
+            />
+          ))}
+        </div>
+      )}
+
       <DataTable
         columns={view_columns ?? model.columns}
         records={records}
@@ -104,6 +121,7 @@ function ResourceIndex({ model, records, pagination, sort, search, filters, view
         filters={filters}
         onCellFilter={handleCellFilter}
         permissions={permissions}
+        serverActions={memberActions}
       />
 
       {permissions?.destroy !== false && selectedIds.size > 0 && (

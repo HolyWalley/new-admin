@@ -40,6 +40,11 @@ module NewAdmin
         app_version: config.app_version,
       }
 
+      # Share all action configs (serialized metadata)
+      if config.action_configs.any?
+        shared[:actions] = config.action_configs.values.map(&:to_h)
+      end
+
       # Pass navigation groups if configured
       if config.navigation_config
         shared[:navigation] = {

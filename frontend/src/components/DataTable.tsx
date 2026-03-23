@@ -4,8 +4,9 @@ import { ArrowUp, ArrowDown, ArrowUpDown, Eye, Pencil, Trash2, Check, X } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo, Permissions } from "@/types";
-import { getAllActions } from "@/lib/registry";
+import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo, Permissions, ServerActionConfig } from "@/types";
+import { getMergedActions } from "@/lib/registry";
+import { DefaultActionButton } from "@/components/DefaultActionButton";
 import { FileIcon } from "lucide-react";
 
 interface BelongsToData {
@@ -29,6 +30,7 @@ interface DataTableProps {
   filters?: FilterRule[];
   onCellFilter?: (column: string, operator: string, value: string) => void;
   permissions?: Permissions;
+  serverActions?: ServerActionConfig[];
 }
 
 export function serializeFilters(params: Record<string, string>, filters: FilterRule[]) {
@@ -45,7 +47,7 @@ export function DataTable({
   associations, attachmentAttributes,
   bulkSelectable, selectedIds, onSelectionChange,
   search, filters, onCellFilter,
-  permissions,
+  permissions, serverActions,
 }: DataTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number | string; displayName: string } | null>(null);
   const visibleColumns = columns.filter(
@@ -313,17 +315,33 @@ export function DataTable({
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    {Object.entries(getAllActions()).map(([actionName, config]) => {
-                      const ActionComponent = config.component;
-                      return (
-                        <ActionComponent
-                          key={actionName}
-                          record={record}
-                          modelParamKey={modelParamKey}
-                          modelName={modelName ?? ""}
-                        />
-                      );
-                    })}
+                    {Object.entries(getMergedActions(serverActions))
+                      .filter(([, a]) => !a.server || a.server.scope === "member")
+                      .map(([actionName, config]) => {
+                        if (config.component) {
+                          const ActionComponent = config.component;
+                          return (
+                            <ActionComponent
+                              key={actionName}
+                              record={record}
+                              modelParamKey={modelParamKey}
+                              modelName={modelName ?? ""}
+                            />
+                          );
+                        }
+                        if (config.server) {
+                          return (
+                            <DefaultActionButton
+                              key={actionName}
+                              record={record}
+                              modelParamKey={modelParamKey}
+                              modelName={modelName ?? ""}
+                              actionConfig={config.server}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
                   </div>
                 </td>
               </tr>

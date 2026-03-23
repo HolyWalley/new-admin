@@ -5,7 +5,8 @@ import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo, Permissions } from "@/types";
+import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo, Permissions, ServerActionConfig } from "@/types";
+import { DefaultActionButton } from "@/components/DefaultActionButton";
 import { FileIcon } from "lucide-react";
 
 interface Props {
@@ -14,9 +15,10 @@ interface Props {
   associations: AssociationData[];
   view_columns?: ColumnDef[];
   permissions?: Permissions;
+  actions?: ServerActionConfig[];
 }
 
-function ResourceShow({ model, record, associations, view_columns, permissions }: Props) {
+function ResourceShow({ model, record, associations, view_columns, permissions, actions }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Map foreign key column names to their belongs_to association
@@ -43,6 +45,15 @@ function ResourceShow({ model, record, associations, view_columns, permissions }
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {(actions ?? []).map((action) => (
+            <DefaultActionButton
+              key={action.name}
+              record={record}
+              modelParamKey={model.param_key}
+              modelName={model.name}
+              actionConfig={action}
+            />
+          ))}
           {permissions?.update !== false && (
             <Link href={`/new-admin/${model.param_key}/${record.id}/edit`}>
               <Button variant="outline">

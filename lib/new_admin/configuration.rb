@@ -4,7 +4,7 @@ module NewAdmin
   class Configuration
     attr_reader :model_configurations, :authentication_block, :current_user_proc,
                 :authorization_adapter_name, :authorization_block, :custom_script_paths,
-                :navigation_config
+                :navigation_config, :action_configs
     attr_accessor :app_name, :app_version
 
     def initialize
@@ -15,6 +15,7 @@ module NewAdmin
       @authorization_block = nil
       @custom_script_paths = []
       @navigation_config = nil
+      @action_configs = {}
       @app_name = "NewAdmin"
       @app_version = nil
     end
@@ -34,6 +35,17 @@ module NewAdmin
     def navigation(&block)
       @navigation_config = NavigationConfig.new
       @navigation_config.instance_eval(&block)
+    end
+
+    def action(name, &block)
+      config = ActionConfig.new(name)
+      config.instance_eval(&block) if block
+      @action_configs[name.to_s] = config
+    end
+
+    # Return actions applicable to a given model class
+    def actions_for(model_class)
+      @action_configs.values.select { |a| a.applies_to?(model_class) }
     end
 
     def model_config_for(model_name)

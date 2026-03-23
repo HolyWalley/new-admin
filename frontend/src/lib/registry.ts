@@ -1,4 +1,4 @@
-import type { CustomFieldProps, CustomActionConfig } from "@/types";
+import type { CustomFieldProps, CustomActionConfig, ServerActionConfig, MergedActionConfig } from "@/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FieldComponent = React.ComponentType<CustomFieldProps>;
@@ -58,6 +58,38 @@ export function getAction(name: string): CustomActionConfig | undefined {
 
 export function getAllActions(): Record<string, CustomActionConfig> {
   return getRegistry().actions;
+}
+
+/**
+ * Merge server-defined actions with client-registered actions.
+ * Server metadata wins; client component overrides auto-generated UI.
+ * Client-only actions (no server definition) are included if they have a component.
+ */
+export function getMergedActions(
+  serverActions: ServerActionConfig[] = [],
+): Record<string, MergedActionConfig> {
+  const clientActions = getAllActions();
+  const merged: Record<string, MergedActionConfig> = {};
+
+  // Start with server-defined actions
+  for (const sa of serverActions) {
+    const clientOverride = clientActions[sa.name];
+    merged[sa.name] = {
+      label: sa.label,
+      icon: sa.icon,
+      component: clientOverride?.component,
+      server: sa,
+    };
+  }
+
+  // Add client-only actions (no server definition)
+  for (const [name, config] of Object.entries(clientActions)) {
+    if (!merged[name] && config.component) {
+      merged[name] = config;
+    }
+  }
+
+  return merged;
 }
 
 // --- Custom pages ---

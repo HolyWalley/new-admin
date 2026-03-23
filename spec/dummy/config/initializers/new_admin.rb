@@ -86,4 +86,31 @@ NewAdmin.config do |config|
   config.model "Comment" do
     navigation_icon "MessageSquare"
   end
+
+  # Custom actions (server-defined with handler — zero JS needed)
+  config.action :archive do
+    only "Order", "Post"
+    member
+    icon "Archive"
+    label "Archive"
+    confirm "Are you sure you want to archive this record?"
+    display :inline
+
+    handler do
+      @record.update!(archived_at: Time.current) if @record.respond_to?(:archived_at)
+      { success: "#{@record.class.name} ##{@record.id} archived" }
+    end
+  end
+
+  config.action :export_csv do
+    only "Order"
+    collection
+    icon "Download"
+    label "Export CSV"
+
+    handler do
+      csv = @scope.limit(100).map { |r| "#{r.id},#{r.try(:number)},#{r.try(:status)}" }.join("\n")
+      { download: { data: "id,number,status\n#{csv}", filename: "orders.csv", content_type: "text/csv" } }
+    end
+  end
 end

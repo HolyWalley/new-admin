@@ -69,6 +69,7 @@ module NewAdmin
         search: params[:q].to_s,
         filters: sanitized_filters,
         permissions: authorization_adapter.permissions_for(@model_config.model),
+        actions: NewAdmin.configuration.actions_for(@model_config.model).map(&:to_h),
       }
     end
 
@@ -83,6 +84,7 @@ module NewAdmin
           update: can?(:update, @record),
           destroy: can?(:destroy, @record),
         },
+        actions: NewAdmin.configuration.actions_for(@model_config.model).select(&:member?).map(&:to_h),
       }
     end
 
