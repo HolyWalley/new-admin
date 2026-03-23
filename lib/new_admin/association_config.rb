@@ -29,11 +29,19 @@ module NewAdmin
       @model.nested_attributes_options.key?(@name.to_sym)
     end
 
+    # URL-safe param key for the target model (e.g., "blog~article_comment")
+    def target_param_key
+      return nil unless @target_model_name
+
+      @target_model_name.underscore.tr("/", "~")
+    end
+
     def to_h
       h = {
         name: @name,
         type: @macro,
         target_model: @target_model_name,
+        param_key: target_param_key,
       }
       h[:foreign_key] = @foreign_key if @foreign_key
       h[:polymorphic] = true if polymorphic?

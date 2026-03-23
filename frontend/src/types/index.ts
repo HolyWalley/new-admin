@@ -70,6 +70,7 @@ export interface AssociationDef {
   name: string;
   type: "belongs_to" | "has_many" | "has_many_through" | "has_one";
   target_model: string | null;
+  param_key: string | null;
   foreign_key?: string;
   polymorphic?: boolean;
   through?: string;

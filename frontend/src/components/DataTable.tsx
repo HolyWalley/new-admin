@@ -73,13 +73,13 @@ export function DataTable({
     if (assoc.type === "has_many_through" && assoc.through) {
       // Find the through (join) association and use its target + FK
       const throughAssoc = (associations ?? []).find((a) => a.name === assoc.through);
-      if (throughAssoc?.target_model && throughAssoc.foreign_key) {
-        return { paramKey: throughAssoc.target_model.toLowerCase(), foreignKey: throughAssoc.foreign_key };
+      if (throughAssoc?.param_key && throughAssoc.foreign_key) {
+        return { paramKey: throughAssoc.param_key, foreignKey: throughAssoc.foreign_key };
       }
       return null;
     }
-    if (assoc.type === "has_many" && assoc.foreign_key && assoc.target_model) {
-      return { paramKey: assoc.target_model.toLowerCase(), foreignKey: assoc.foreign_key };
+    if (assoc.type === "has_many" && assoc.foreign_key && assoc.param_key) {
+      return { paramKey: assoc.param_key, foreignKey: assoc.foreign_key };
     }
     return null;
   }
