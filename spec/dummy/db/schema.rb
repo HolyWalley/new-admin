@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_23_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_23_210000) do
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -79,6 +79,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_200000) do
     t.datetime "updated_at", null: false
     t.integer "user_id"
     t.index ["user_id"], name: "index_blog_articles_on_user_id"
+  end
+
+  create_table "businesses_location_settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.string "type", null: false
+    t.datetime "updated_at", null: false
+    t.string "value"
   end
 
   create_table "categories", force: :cascade do |t|

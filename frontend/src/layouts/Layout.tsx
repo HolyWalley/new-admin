@@ -147,9 +147,18 @@ function buildNavEntries(models: ModelSummary[]): NavEntry[] {
     }
   }
 
-  // Insert STI groups at alphabetical position among entries
+  // Insert STI groups — namespaced ones go into their namespace group
   for (const stiGroup of stiGroupMap.values()) {
-    entries.push(stiGroup);
+    const parentNs = stiGroup.parent.navigation_group;
+    if (parentNs && parentNs.includes("::")) {
+      if (!nsGroupMap.has(parentNs)) {
+        nsGroupMap.set(parentNs, { type: "namespace", label: parentNs, models: [] });
+      }
+      // Add the STI parent + children as flat models inside the namespace group
+      nsGroupMap.get(parentNs)!.models.push(stiGroup.parent, ...stiGroup.children);
+    } else {
+      entries.push(stiGroup);
+    }
   }
 
   // Insert namespace groups
@@ -165,6 +174,12 @@ function buildNavEntries(models: ModelSummary[]): NavEntry[] {
   });
 
   return entries;
+}
+
+/** Strip namespace prefix, returning just the last segment of a :: delimited name */
+function demodulize(name: string): string {
+  const parts = name.split("::");
+  return parts[parts.length - 1];
 }
 
 function sortByWeight(models: ModelSummary[]): ModelSummary[] {
@@ -300,7 +315,7 @@ function CollapsibleModelGroup({
           className="flex-1"
         >
           <ModelIcon name={parent.name} iconOverride={parent.icon} />
-          <SidebarLabel className="flex-1 truncate">{parent.name}</SidebarLabel>
+          <SidebarLabel className="flex-1 truncate">{demodulize(parent.name)}</SidebarLabel>
           <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
             {parent.count}
           </SidebarLabel>
@@ -323,7 +338,7 @@ function CollapsibleModelGroup({
                 href={`/new-admin/${model.param_key}`}
                 isActive={currentModel === model.name}
               >
-                <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
+                <SidebarLabel className="flex-1 truncate">{demodulize(model.name)}</SidebarLabel>
                 <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
                   {model.count}
                 </SidebarLabel>
@@ -379,7 +394,7 @@ function CollapsibleNamespaceGroup({
                 isActive={currentModel === model.name}
               >
                 <SidebarLabel className="flex-1 truncate">
-                  {model.name.replace(`${label}::`, "")}
+                  {demodulize(model.name)}
                 </SidebarLabel>
                 <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
                   {model.count}
