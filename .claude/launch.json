@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dummy-app",
+      "runtimeExecutable": "bin/rails",
+      "runtimeArgs": ["server", "-p", "3000"],
+      "port": 3000,
+      "cwd": "spec/dummy"
+    }
+  ]
+}

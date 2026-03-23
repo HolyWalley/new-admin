@@ -4,7 +4,7 @@
 
 Get Inertia.js + React + shadcn/ui rendering inside the Rails engine. Prove the full stack works end-to-end with one hardcoded page.
 
-## Status: NOT STARTED
+## Status: COMPLETE
 
 ## End state
 
