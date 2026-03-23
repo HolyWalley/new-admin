@@ -79,10 +79,10 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — sticky full-height, scrolls independently */}
       <aside
         className={cn(
-          "hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-in-out overflow-hidden",
+          "hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-in-out overflow-hidden sticky top-0 h-svh",
           open ? "w-64" : "w-12",
           className
         )}
@@ -263,7 +263,7 @@ export function SidebarInset({
   className?: string;
 }) {
   return (
-    <main className={cn("flex flex-1 flex-col overflow-hidden", className)}>
+    <main className={cn("flex flex-1 flex-col min-h-svh", className)}>
       {children}
     </main>
   );

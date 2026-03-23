@@ -1,11 +1,12 @@
 import { FieldWrapper } from "./FieldWrapper";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
 
 interface EnumFieldProps {
   name: string;
@@ -21,25 +22,35 @@ interface EnumFieldProps {
 }
 
 export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable, htmlId }: EnumFieldProps) {
+  const hasError = error && error.length > 0;
+
   return (
     <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
-      <Select
-        value={value ?? ""}
-        onValueChange={(val) => onChange(val as string)}
-        disabled={disabled}
+      <Combobox<string>
+        items={options}
+        value={value || null}
+        onValueChange={(val) => onChange(val ?? "")}
       >
-        <SelectTrigger id={htmlId ?? name} className="w-full" aria-invalid={error && error.length > 0 ? true : undefined}>
-          <SelectValue placeholder="— Select —" />
-        </SelectTrigger>
-        <SelectContent>
-          {nullable && <SelectItem value="">— Select —</SelectItem>}
-          {options.map((opt) => (
-            <SelectItem key={opt} value={opt}>
-              {opt}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <ComboboxInput
+          id={htmlId ?? name}
+          data-testid={htmlId ?? name}
+          data-slot="select-trigger"
+          placeholder="— Select —"
+          disabled={disabled}
+          showClear={nullable && !!value}
+          aria-invalid={hasError || undefined}
+        />
+        <ComboboxContent>
+          <ComboboxList>
+            {(item: string) => (
+              <ComboboxItem key={item} value={item}>
+                {item}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+          <ComboboxEmpty>No results found.</ComboboxEmpty>
+        </ComboboxContent>
+      </Combobox>
     </FieldWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import {
   SidebarProvider,
   Sidebar,
@@ -14,8 +14,25 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LayoutDashboard, Database, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  Database,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  ChevronsUpDown,
+  LogOut,
+} from "lucide-react";
 import { CommandPalette } from "@/components/CommandPalette";
 import type { SharedProps } from "@/types";
 
@@ -23,6 +40,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
   const models = props.models ?? [];
   const currentModel = props.current_model;
+  const currentUser = props.current_user;
   const flash = props.flash;
   const isDashboard = url === "/new-admin" || url === "/new-admin/";
 
@@ -30,7 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <CommandPalette />
       <Sidebar>
-        <SidebarHeaderContent isDashboard={isDashboard} />
+        <SidebarHeaderMenu isDashboard={isDashboard} />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -64,16 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter>
-          <SidebarLabel>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-sidebar-foreground/40">
-                v0.1.0
-              </span>
-              <ThemeToggle />
-            </div>
-          </SidebarLabel>
-        </SidebarFooter>
+        <SidebarFooterUser currentUser={currentUser} />
       </Sidebar>
 
       <SidebarInset>
@@ -98,20 +107,114 @@ function SidebarLabel({ children, className }: { children: React.ReactNode; clas
   return <span className={className}>{children}</span>;
 }
 
-function SidebarHeaderContent({ }: { isDashboard: boolean }) {
+/* ───── Sidebar Header: App menu dropdown ───── */
+
+function SidebarHeaderMenu({ isDashboard }: { isDashboard: boolean }) {
   const { open } = useSidebar();
+
   return (
     <SidebarHeader>
-      <Link
-        href="/new-admin"
-        className="flex items-center gap-2.5 font-semibold text-sidebar-primary"
-      >
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground shrink-0">
-          <LayoutDashboard className="h-4 w-4" />
-        </div>
-        {open && <span className="text-sm tracking-tight">NewAdmin</span>}
-      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button className={`flex w-full items-center gap-2 rounded-md text-left text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-colors ${open ? "px-1 py-0.5" : "justify-center"}`} />
+          }
+        >
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-accent shrink-0">
+            <LayoutDashboard className="h-4 w-4 text-sidebar-foreground" />
+          </div>
+          {open && (
+            <>
+              <div className="flex-1 truncate">
+                <div className="text-sm font-semibold leading-tight">NewAdmin</div>
+                <div className="text-[11px] font-normal text-sidebar-foreground/50 leading-tight">v0.1.0</div>
+              </div>
+              <ChevronsUpDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0" />
+            </>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="bottom" align="start" sideOffset={6}>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+            <DropdownMenuItem
+              render={<Link href="/new-admin" />}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+              {isDashboard && (
+                <span className="ml-auto text-[10px] text-muted-foreground">current</span>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </SidebarHeader>
+  );
+}
+
+/* ───── Sidebar Footer: User panel with dropdown ───── */
+
+function SidebarFooterUser({ currentUser }: { currentUser?: SharedProps["current_user"] }) {
+  const { open } = useSidebar();
+
+  const userName = currentUser?.name ?? "Admin";
+  const userEmail = currentUser?.email;
+  const initials = userName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <SidebarFooter>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button className={`flex w-full items-center gap-2 rounded-md text-left text-sm hover:bg-sidebar-accent transition-colors ${open ? "px-1 py-1" : "justify-center"}`} />
+          }
+        >
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-accent text-[11px] font-semibold text-sidebar-foreground shrink-0">
+            {initials}
+          </div>
+          {open && (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium leading-tight truncate">{userName}</div>
+                {userEmail && (
+                  <div className="text-[11px] text-sidebar-foreground/50 leading-tight truncate">{userEmail}</div>
+                )}
+              </div>
+              <ChevronsUpDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0" />
+            </>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start" sideOffset={6}>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>
+              <div className="flex items-center gap-2 py-0.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{userName}</div>
+                  {userEmail && <div className="text-xs font-normal text-muted-foreground truncate">{userEmail}</div>}
+                </div>
+              </div>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => router.delete("/users/sign_out")}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarFooter>
   );
 }
 

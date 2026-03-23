@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Plus, X, Pencil, Check } from "lucide-react";
+import { Plus, X, Pencil, Check, CalendarIcon } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +15,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import type { ColumnDef, FilterRule } from "@/types";
 import { FILTER_OPERATORS } from "@/types";
 
@@ -292,20 +294,16 @@ function FilterRuleRow({
     if (column?.type === "date" || column?.type === "datetime") {
       return (
         <>
-          <input
-            type="date"
+          <FilterDatePicker
             value={rule.value}
-            onChange={(e) => onUpdate({ value: e.target.value }, "navigate")}
-            className={`${inputClass} w-36`}
+            onChange={(v) => onUpdate({ value: v }, "navigate")}
           />
           {isBetween && (
             <>
               <span className="text-xs text-muted-foreground">and</span>
-              <input
-                type="date"
+              <FilterDatePicker
                 value={rule.value2 ?? ""}
-                onChange={(e) => onUpdate({ value2: e.target.value }, "navigate")}
-                className={`${inputClass} w-36`}
+                onChange={(v) => onUpdate({ value2: v }, "navigate")}
               />
             </>
           )}
@@ -398,4 +396,53 @@ function FilterRuleRow({
       </div>
     </div>
   );
+}
+
+function FilterDatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+
+  const dateValue = value ? parseDateStr(value) : undefined;
+
+  function handleSelect(date: Date | undefined) {
+    if (date) {
+      onChange(format(date, "yyyy-MM-dd"));
+    }
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="flex h-7 items-center gap-1.5 rounded-md border border-input bg-background px-2 text-sm shadow-sm hover:bg-accent/50 transition-colors"
+          />
+        }
+      >
+        <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+        <span className={dateValue ? "" : "text-muted-foreground"}>
+          {dateValue ? format(dateValue, "MMM d, yyyy") : "Pick date"}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={dateValue}
+          onSelect={handleSelect}
+          defaultMonth={dateValue}
+          captionLayout="dropdown"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function parseDateStr(str: string): Date | undefined {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const d = parse(str, "yyyy-MM-dd", new Date());
+    return isValid(d) ? d : undefined;
+  }
+  const d = new Date(str);
+  return isValid(d) ? d : undefined;
 }

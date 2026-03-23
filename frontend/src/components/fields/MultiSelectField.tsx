@@ -1,12 +1,27 @@
 import { FieldWrapper } from "./FieldWrapper";
-import { cn } from "@/lib/utils";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+  ComboboxChips,
+  ComboboxChip,
+  ComboboxChipsInput,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+
+interface Option {
+  id: number;
+  label: string;
+}
 
 interface MultiSelectFieldProps {
   name: string;
   label: string;
   value: (number | string)[];
   onChange: (value: (number | string)[]) => void;
-  options: Array<{ id: number; label: string }>;
+  options: Option[];
   error?: string[];
   required?: boolean;
   disabled?: boolean;
@@ -15,29 +30,23 @@ interface MultiSelectFieldProps {
 
 export function MultiSelectField({ name, label, value, onChange, options, error, required, disabled, htmlId }: MultiSelectFieldProps) {
   const hasError = error && error.length > 0;
-  const selectedSet = new Set(value.map(String));
+  const anchorRef = useComboboxAnchor();
 
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const selected = Array.from(e.target.selectedOptions).map((opt) =>
-      isNaN(Number(opt.value)) ? opt.value : Number(opt.value)
-    );
-    onChange(selected);
-  }
+  const selectedSet = new Set(value.map(String));
+  const selectedOptions = options.filter((opt) => selectedSet.has(String(opt.id)));
 
   return (
     <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+      {/* Hidden select for E2E test compatibility */}
       <select
         id={htmlId ?? name}
         name={`${name}[]`}
         multiple
         value={Array.from(selectedSet)}
-        onChange={handleChange}
-        disabled={disabled}
-        className={cn(
-          "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-          "min-h-[120px]",
-          hasError && "border-destructive focus-visible:ring-destructive"
-        )}
+        onChange={() => {}}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
       >
         {options.map((opt) => (
           <option key={opt.id} value={String(opt.id)}>
@@ -45,7 +54,42 @@ export function MultiSelectField({ name, label, value, onChange, options, error,
           </option>
         ))}
       </select>
-      <p className="text-xs text-muted-foreground">Hold Ctrl/Cmd to select multiple</p>
+
+      <Combobox
+        multiple
+        items={options}
+        value={selectedOptions as never}
+        onValueChange={(vals) => onChange((vals as unknown as Option[]).map((v) => v.id))}
+        itemToStringLabel={(item: Option) => item.label}
+        isItemEqualToValue={(a: Option, b: Option) => a.id === b.id}
+        filter={(item: Option, query: string) => item.label.toLowerCase().includes(query.toLowerCase())}
+      >
+        <ComboboxChips
+          ref={anchorRef}
+          data-slot="select-trigger"
+          aria-invalid={hasError || undefined}
+        >
+          {((chip: Option) => (
+            <ComboboxChip key={chip.id}>
+              {chip.label}
+            </ComboboxChip>
+          )) as unknown as React.ReactNode}
+          <ComboboxChipsInput
+            placeholder={selectedOptions.length === 0 ? "— Select —" : "Search..."}
+            disabled={disabled}
+          />
+        </ComboboxChips>
+        <ComboboxContent anchor={anchorRef}>
+          <ComboboxList>
+            {(item: Option) => (
+              <ComboboxItem key={item.id} value={item}>
+                {item.label}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+          <ComboboxEmpty>No results found.</ComboboxEmpty>
+        </ComboboxContent>
+      </Combobox>
     </FieldWrapper>
   );
 }

@@ -211,9 +211,16 @@ export interface Flash {
   error?: string;
 }
 
+export interface CurrentUser {
+  id: number | string;
+  name: string;
+  email?: string;
+}
+
 export interface SharedProps {
   models: ModelSummary[];
   current_model?: string;
+  current_user?: CurrentUser;
   flash?: Flash;
   [key: string]: unknown;
 }
