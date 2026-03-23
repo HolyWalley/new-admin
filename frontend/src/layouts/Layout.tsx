@@ -36,7 +36,7 @@ import { Toaster, toast } from "sonner";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ModelIcon } from "@/components/ModelIcon";
 import { getAllPages } from "@/lib/registry";
-import type { SharedProps, ModelSummary, NavigationGroup } from "@/types";
+import type { SharedProps, ModelSummary } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
@@ -193,6 +193,38 @@ function ModelItem({ model, currentModel }: { model: ModelSummary; currentModel?
   );
 }
 
+/** Render a list of NavEntry items (flat models, STI groups, namespace groups) */
+function NavEntryList({ entries, currentModel }: { entries: NavEntry[]; currentModel?: string }) {
+  return (
+    <>
+      {entries.map((entry) => {
+        if ("type" in entry && entry.type === "sti") {
+          return (
+            <CollapsibleModelGroup
+              key={entry.parent.name}
+              parent={entry.parent}
+              children={entry.children}
+              currentModel={currentModel}
+            />
+          );
+        }
+        if ("type" in entry && entry.type === "namespace") {
+          return (
+            <CollapsibleNamespaceGroup
+              key={entry.label}
+              label={entry.label}
+              models={entry.models}
+              currentModel={currentModel}
+            />
+          );
+        }
+        const model = entry as ModelSummary;
+        return <ModelItem key={model.name} model={model} currentModel={currentModel} />;
+      })}
+    </>
+  );
+}
+
 function ModelNavigation({ models, currentModel, navigation }: { models: ModelSummary[]; currentModel?: string; navigation?: SharedProps["navigation"] }) {
   // When navigation groups are configured, render grouped sections
   if (navigation?.groups && navigation.groups.length > 0) {
@@ -204,11 +236,12 @@ function ModelNavigation({ models, currentModel, navigation }: { models: ModelSu
         .map((name) => modelMap.get(name))
         .filter((m): m is ModelSummary => !!m);
       groupModels.forEach((m) => assigned.add(m.name));
-      return { label: group.label, models: sortByWeight(groupModels) };
+      return { label: group.label, entries: buildNavEntries(sortByWeight(groupModels)) };
     });
 
     // Collect unassigned models into "Other"
     const unassigned = sortByWeight(models.filter((m) => !assigned.has(m.name)));
+    const unassignedEntries = buildNavEntries(unassigned);
 
     return (
       <>
@@ -216,19 +249,15 @@ function ModelNavigation({ models, currentModel, navigation }: { models: ModelSu
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarMenu>
-              {group.models.map((model) => (
-                <ModelItem key={model.name} model={model} currentModel={currentModel} />
-              ))}
+              <NavEntryList entries={group.entries} currentModel={currentModel} />
             </SidebarMenu>
           </SidebarGroup>
         ))}
-        {unassigned.length > 0 && (
+        {unassignedEntries.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Other</SidebarGroupLabel>
             <SidebarMenu>
-              {unassigned.map((model) => (
-                <ModelItem key={model.name} model={model} currentModel={currentModel} />
-              ))}
+              <NavEntryList entries={unassignedEntries} currentModel={currentModel} />
             </SidebarMenu>
           </SidebarGroup>
         )}
@@ -243,30 +272,7 @@ function ModelNavigation({ models, currentModel, navigation }: { models: ModelSu
     <SidebarGroup>
       <SidebarGroupLabel>Models</SidebarGroupLabel>
       <SidebarMenu>
-        {entries.map((entry) => {
-          if ("type" in entry && entry.type === "sti") {
-            return (
-              <CollapsibleModelGroup
-                key={entry.parent.name}
-                parent={entry.parent}
-                children={entry.children}
-                currentModel={currentModel}
-              />
-            );
-          }
-          if ("type" in entry && entry.type === "namespace") {
-            return (
-              <CollapsibleNamespaceGroup
-                key={entry.label}
-                label={entry.label}
-                models={entry.models}
-                currentModel={currentModel}
-              />
-            );
-          }
-          const model = entry as ModelSummary;
-          return <ModelItem key={model.name} model={model} currentModel={currentModel} />;
-        })}
+        <NavEntryList entries={entries} currentModel={currentModel} />
       </SidebarMenu>
     </SidebarGroup>
   );
@@ -345,19 +351,25 @@ function CollapsibleNamespaceGroup({
 
   return (
     <SidebarMenuItem>
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className={sidebarMenuLinkClass(false)}
-      >
-        <ModelIcon name={label} />
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className={`${sidebarMenuLinkClass(false)} flex-1 text-left`}
+        >
+          <ModelIcon name={label} />
+          <SidebarLabel className="flex-1 truncate">{label}</SidebarLabel>
+        </button>
         {sidebarOpen && (
-          <>
-            <span className="flex-1 truncate">{label}</span>
-            <ChevronRight className={`h-3.5 w-3.5 text-sidebar-foreground/40 transition-transform ${expanded ? "rotate-90" : ""}`} />
-          </>
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </button>
         )}
-      </button>
+      </div>
       {expanded && sidebarOpen && (
         <ul className="ml-4 mt-0.5 flex flex-col gap-px border-l border-sidebar-border pl-2">
           {models.map((model) => (
