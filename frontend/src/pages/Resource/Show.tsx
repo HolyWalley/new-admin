@@ -1,8 +1,10 @@
+import { useState } from "react";
 import Layout from "@/layouts/Layout";
-import { Link, router } from "@inertiajs/react";
+import { Link } from "@inertiajs/react";
 import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo } from "@/types";
 import { FileIcon } from "lucide-react";
 
@@ -13,10 +15,7 @@ interface Props {
 }
 
 function ResourceShow({ model, record, associations }: Props) {
-  function handleDelete() {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-    router.delete(`/new-admin/${model.param_key}/${record.id}`);
-  }
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Map foreign key column names to their belongs_to association
   const fkToAssoc = new Map<string, AssociationData>();
@@ -48,7 +47,7 @@ function ResourceShow({ model, record, associations }: Props) {
               Edit
             </Button>
           </Link>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 />
             Delete
           </Button>
@@ -173,6 +172,15 @@ function ResourceShow({ model, record, associations }: Props) {
           <Button variant="ghost">&larr; Back to {model.name} list</Button>
         </Link>
       </div>
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        modelParamKey={model.param_key}
+        recordId={record.id}
+        recordDisplayName={record.display_name}
+        modelName={model.name}
+      />
     </div>
   );
 }

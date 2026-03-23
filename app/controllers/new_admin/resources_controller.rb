@@ -3,7 +3,7 @@
 module NewAdmin
   class ResourcesController < ApplicationController
     before_action :set_model_config
-    before_action :set_record, only: [:show, :edit, :update, :destroy]
+    before_action :set_record, only: [:show, :edit, :update, :destroy, :delete_confirmation]
 
     inertia_share do
       { current_model: @model_config&.name }
@@ -162,7 +162,90 @@ module NewAdmin
       end
     end
 
+    def delete_confirmation
+      render json: build_cascade_info(@record, @model_config)
+    end
+
     private
+
+    def build_cascade_info(record, model_config, visited = Set.new)
+      # Prevent infinite loops from circular associations
+      key = "#{model_config.name}##{record.id}"
+      return { cascades: [], restrict: [] } if visited.include?(key)
+      visited.add(key)
+
+      cascades = []
+      restrict = []
+
+      model_config.associations.each do |assoc|
+        next unless [:has_many, :has_many_through, :has_one].include?(assoc.macro)
+        next if assoc.dependent.blank?
+
+        dep = assoc.dependent.to_s
+
+        case dep
+        when "destroy", "delete_all", "destroy_async"
+          related = record.send(assoc.name)
+          count = assoc.macro == :has_one ? (related ? 1 : 0) : (related.count rescue 0)
+          next if count == 0
+
+          entry = {
+            association: assoc.name,
+            model: assoc.target_model_name,
+            count: count,
+            dependent: dep,
+          }
+
+          # Recursively check children for dependent: :destroy
+          if dep == "destroy" && assoc.target_model_name
+            target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+            if target_config
+              child_cascades = []
+              # Sample first related record for recursive check
+              sample = assoc.macro == :has_one ? related : related.first
+              if sample
+                child_info = build_cascade_info(sample, target_config, visited)
+                child_cascades = child_info[:cascades] if child_info[:cascades].any?
+              end
+              entry[:children] = child_cascades if child_cascades.any?
+            end
+          end
+
+          cascades << entry
+
+        when "restrict_with_error", "restrict_with_exception"
+          related = record.send(assoc.name)
+          count = assoc.macro == :has_one ? (related ? 1 : 0) : (related.count rescue 0)
+          next if count == 0
+
+          restrict << {
+            association: assoc.name,
+            model: assoc.target_model_name,
+            count: count,
+            dependent: dep,
+          }
+
+        when "nullify"
+          # Nullify doesn't delete anything, but worth mentioning
+          related = record.send(assoc.name)
+          count = assoc.macro == :has_one ? (related ? 1 : 0) : (related.count rescue 0)
+          next if count == 0
+
+          cascades << {
+            association: assoc.name,
+            model: assoc.target_model_name,
+            count: count,
+            dependent: "nullify",
+          }
+        end
+      end
+
+      {
+        record: { display_name: record.send(model_config.to_s_method).to_s, model: model_config.name },
+        cascades: cascades,
+        restrict: restrict,
+      }
+    end
 
     def set_model_config
       @model_config = NewAdmin::Introspector.model_for(params[:model_name])

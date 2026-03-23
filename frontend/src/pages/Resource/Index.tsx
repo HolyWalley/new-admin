@@ -7,6 +7,7 @@ import { DataTable, serializeFilters } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterPanel } from "@/components/FilterPanel";
+import { BulkDeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule } from "@/types";
 
 interface Props {
@@ -20,14 +21,11 @@ interface Props {
 
 function ResourceIndex({ model, records, pagination, sort, search, filters }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} selected ${selectedIds.size === 1 ? "record" : "records"}?`)) return;
-    router.delete(`/new-admin/${model.param_key}/bulk_destroy`, {
-      data: { bulk_ids: Array.from(selectedIds) },
-      onSuccess: () => setSelectedIds(new Set()),
-    });
+    setBulkDeleteOpen(true);
   }
 
   function handleFilterChange(newRules: FilterRule[]) {
@@ -92,6 +90,7 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
         records={records}
         sort={sort}
         modelParamKey={model.param_key}
+        modelName={model.name}
         associations={model.associations}
         attachmentAttributes={model.attachment_attributes}
         bulkSelectable
@@ -124,6 +123,16 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
         sort={sort}
         search={search}
         filters={filters}
+      />
+
+      <BulkDeleteConfirmationDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        modelParamKey={model.param_key}
+        modelName={model.name}
+        selectedCount={selectedIds.size}
+        selectedIds={selectedIds}
+        onSuccess={() => setSelectedIds(new Set())}
       />
     </div>
   );

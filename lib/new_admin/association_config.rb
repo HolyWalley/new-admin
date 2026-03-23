@@ -3,7 +3,7 @@
 module NewAdmin
   class AssociationConfig
     attr_reader :name, :macro, :target_model_name, :foreign_key,
-                :through, :source
+                :through, :source, :dependent
 
     def initialize(model, reflection)
       @model = model
@@ -14,6 +14,7 @@ module NewAdmin
       @foreign_key = reflection.foreign_key&.to_s
       @through = reflection.options[:through]&.to_s
       @source = reflection.options[:source]&.to_s
+      @dependent = reflection.options[:dependent]&.to_s
     end
 
     def polymorphic?
@@ -38,6 +39,7 @@ module NewAdmin
       h[:polymorphic] = true if polymorphic?
       h[:through] = @through if through?
       h[:nested_attributes] = true if nested_attributes?
+      h[:dependent] = @dependent if @dependent.present?
       h
     end
 

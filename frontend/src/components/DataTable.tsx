@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { router, Link } from "@inertiajs/react";
 import { ArrowUp, ArrowDown, ArrowUpDown, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo } from "@/types";
 import { FileIcon } from "lucide-react";
 
@@ -16,6 +18,7 @@ interface DataTableProps {
   records: RecordData[];
   sort: SortState;
   modelParamKey: string;
+  modelName?: string;
   associations?: AssociationDef[];
   attachmentAttributes?: Array<{ name: string; multiple: boolean }>;
   bulkSelectable?: boolean;
@@ -36,11 +39,12 @@ export function serializeFilters(params: Record<string, string>, filters: Filter
 }
 
 export function DataTable({
-  columns, records, sort, modelParamKey, associations,
-  attachmentAttributes,
+  columns, records, sort, modelParamKey, modelName,
+  associations, attachmentAttributes,
   bulkSelectable, selectedIds, onSelectionChange,
   search, filters, onCellFilter,
 }: DataTableProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number | string; displayName: string } | null>(null);
   const visibleColumns = columns.filter(
     (col) => !["text", "binary"].includes(col.type)
   );
@@ -101,9 +105,8 @@ export function DataTable({
     );
   }
 
-  function handleDelete(id: number | string) {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-    router.delete(`/new-admin/${modelParamKey}/${id}`);
+  function handleDelete(record: RecordData) {
+    setDeleteTarget({ id: record.id, displayName: record.display_name });
   }
 
   function handleSelectAll(checked: boolean) {
@@ -297,7 +300,7 @@ export function DataTable({
                       variant="ghost"
                       size="icon-sm"
                       title="Delete"
-                      onClick={() => handleDelete(record.id)}
+                      onClick={() => handleDelete(record)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -309,6 +312,17 @@ export function DataTable({
           </tbody>
         </table>
       </div>
+
+      {deleteTarget && (
+        <DeleteConfirmationDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+          modelParamKey={modelParamKey}
+          recordId={deleteTarget.id}
+          recordDisplayName={deleteTarget.displayName}
+          modelName={modelName ?? modelParamKey}
+        />
+      )}
     </div>
   );
 }

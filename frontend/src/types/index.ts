@@ -29,6 +29,7 @@ export interface AssociationDef {
   polymorphic?: boolean;
   through?: string;
   nested_attributes?: boolean;
+  dependent?: string;
 }
 
 export interface ModelMeta {
@@ -208,6 +209,20 @@ export const FILTER_OPERATORS: Record<string, Array<{ key: string; label: string
     { key: "blank", label: "is blank", unary: true },
   ],
 };
+
+export interface CascadeEntry {
+  association: string;
+  model: string | null;
+  count: number;
+  dependent: string;
+  children?: CascadeEntry[];
+}
+
+export interface CascadeInfo {
+  record: { display_name: string; model: string };
+  cascades: CascadeEntry[];
+  restrict: CascadeEntry[];
+}
 
 export interface Flash {
   success?: string;
