@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { router, usePage } from "@inertiajs/react";
-import { Database, LayoutDashboard } from "lucide-react";
+import { FileText, LayoutDashboard } from "lucide-react";
+import { ModelIcon } from "@/components/ModelIcon";
 import {
   CommandDialog,
   Command,
@@ -10,12 +11,14 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
+import { getAllPages } from "@/lib/registry";
 import type { SharedProps } from "@/types";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const { props } = usePage<SharedProps>();
   const models = props.models ?? [];
+  const pages = Object.entries(getAllPages());
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -51,7 +54,7 @@ export function CommandPalette() {
                 key={model.param_key}
                 onSelect={() => navigate(`/new-admin/${model.param_key}`)}
               >
-                <Database className="h-4 w-4 opacity-40" />
+                <ModelIcon name={model.name} />
                 <span className="flex-1">{model.name}</span>
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {model.count}
@@ -59,6 +62,19 @@ export function CommandPalette() {
               </CommandItem>
             ))}
           </CommandGroup>
+          {pages.length > 0 && (
+            <CommandGroup heading="Pages">
+              {pages.map(([path, entry]) => (
+                <CommandItem
+                  key={path}
+                  onSelect={() => navigate(`/new-admin/pages/${path}`)}
+                >
+                  <FileText className="h-4 w-4 opacity-40" />
+                  <span>{entry.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </CommandList>
       </Command>
     </CommandDialog>

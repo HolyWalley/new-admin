@@ -8,6 +8,9 @@ NewAdmin.config do |config|
   # Authorization: use Pundit policies
   config.authorize_with :pundit
 
+  # Custom components built from app/javascript/new_admin/
+  config.custom_scripts "new_admin_custom/custom"
+
   config.model "Order" do
     list do
       field :number
@@ -19,7 +22,7 @@ NewAdmin.config do |config|
 
     edit do
       field :number, label: "Order Number", help: "Auto-generated if blank"
-      field :status
+      field :status, custom_component: "OrderStatusSelect"
       field :notes, label: "Internal Notes", help: "Only visible to admins"
       field :user
       exclude :total # computed field

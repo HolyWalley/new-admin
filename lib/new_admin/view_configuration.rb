@@ -24,12 +24,13 @@ module NewAdmin
   end
 
   class FieldDeclaration
-    attr_reader :name, :label, :help
+    attr_reader :name, :label, :help, :custom_component
 
     def initialize(name, options = {})
       @name = name
       @label = options[:label]
       @help = options[:help]
+      @custom_component = options[:custom_component]
     end
   end
 end

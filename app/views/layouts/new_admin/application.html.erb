@@ -14,5 +14,8 @@
   <%= yield %>
 
   <%= javascript_include_tag "new_admin/new_admin", nonce: true, type: "module" %>
+  <% NewAdmin.configuration.custom_script_paths.each do |path| %>
+    <%= javascript_include_tag path, nonce: true, type: "module" %>
+  <% end %>
 </body>
 </html>

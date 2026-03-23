@@ -84,6 +84,7 @@ module NewAdmin
       if field_declaration
         h[:label] = field_declaration.label if field_declaration.label
         h[:help] = field_declaration.help if field_declaration.help
+        h[:custom_component] = field_declaration.custom_component if field_declaration.custom_component
       end
       h
     end

@@ -1,0 +1,56 @@
+// NewAdmin TypeScript type definitions for custom components
+
+export interface ColumnDef {
+  name: string
+  type: "string" | "text" | "integer" | "decimal" | "float" | "boolean" | "date" | "datetime" | "time" | "enum" | "json" | "binary"
+  nullable: boolean
+  primary_key: boolean
+  default?: string | number | boolean | null
+  limit?: number
+  enum_values?: string[]
+  foreign_key?: boolean
+  label?: string
+  help?: string
+  custom_component?: string
+}
+
+export interface CustomFieldProps {
+  name: string
+  label: string
+  value: unknown
+  onChange: (value: unknown) => void
+  error?: string[]
+  required?: boolean
+  help?: string
+  field: ColumnDef
+}
+
+export interface RecordData {
+  id: number | string
+  display_name: string
+  [key: string]: unknown
+}
+
+export interface CustomActionProps {
+  record?: RecordData
+  selectedIds?: Set<number | string>
+  modelParamKey: string
+  modelName: string
+}
+
+export interface CustomActionConfig {
+  label: string
+  icon?: string
+  component: React.ComponentType<CustomActionProps>
+}
+
+// Global window augmentation for NewAdmin registry
+declare global {
+  interface Window {
+    NewAdmin?: {
+      registerField: (name: string, component: React.ComponentType<CustomFieldProps>) => void
+      registerAction: (name: string, config: CustomActionConfig) => void
+      registerPage: (path: string, component: React.ComponentType, options?: { label?: string }) => void
+    }
+  }
+}

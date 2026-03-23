@@ -16,6 +16,7 @@ import {
   RichTextField,
   NestedFormSection,
 } from "@/components/fields";
+import { getField } from "@/lib/registry";
 import type {
   ModelMeta,
   ColumnDef,
@@ -260,6 +261,27 @@ export function ResourceForm({
         const error = getError(col.name);
         const required = !col.nullable;
         const fieldHtmlId = htmlId(col.name);
+
+        // Custom component override — registered via registerField()
+        if (col.custom_component) {
+          const CustomField = getField(col.custom_component);
+          if (CustomField) {
+            return (
+              <CustomField
+                key={col.name}
+                name={col.name}
+                label={col.label ?? col.name}
+                value={value}
+                onChange={(v) => setValue(col.name, v)}
+                error={error}
+                required={required}
+                help={col.help}
+                field={col}
+              />
+            );
+          }
+          // If not found in registry, fall through to defaults
+        }
 
         // Foreign key → SelectField
         if (isForeignKey(col)) {

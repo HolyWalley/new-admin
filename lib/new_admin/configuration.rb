@@ -3,7 +3,7 @@
 module NewAdmin
   class Configuration
     attr_reader :model_configurations, :authentication_block, :current_user_proc,
-                :authorization_adapter_name, :authorization_block
+                :authorization_adapter_name, :authorization_block, :custom_script_paths
 
     def initialize
       @model_configurations = {}
@@ -11,6 +11,13 @@ module NewAdmin
       @current_user_proc = nil
       @authorization_adapter_name = nil
       @authorization_block = nil
+      @custom_script_paths = []
+    end
+
+    # Register a script to load after new_admin's main JS bundle.
+    # config.custom_scripts "new_admin_custom/custom"
+    def custom_scripts(*paths)
+      @custom_script_paths.concat(paths)
     end
 
     def model(model_name, &block)

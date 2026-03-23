@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo, Permissions } from "@/types";
+import { getAllActions } from "@/lib/registry";
 import { FileIcon } from "lucide-react";
 
 interface BelongsToData {
@@ -312,6 +313,17 @@ export function DataTable({
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
+                    {Object.entries(getAllActions()).map(([actionName, config]) => {
+                      const ActionComponent = config.component;
+                      return (
+                        <ActionComponent
+                          key={actionName}
+                          record={record}
+                          modelParamKey={modelParamKey}
+                          modelName={modelName ?? ""}
+                        />
+                      );
+                    })}
                   </div>
                 </td>
               </tr>

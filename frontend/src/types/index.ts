@@ -21,6 +21,31 @@ export interface ColumnDef {
   foreign_key?: boolean;
   label?: string;
   help?: string;
+  custom_component?: string;
+}
+
+export interface CustomFieldProps {
+  name: string;
+  label: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  error?: string[];
+  required?: boolean;
+  help?: string;
+  field: ColumnDef;
+}
+
+export interface CustomActionProps {
+  record?: RecordData;
+  selectedIds?: Set<number | string>;
+  modelParamKey: string;
+  modelName: string;
+}
+
+export interface CustomActionConfig {
+  label: string;
+  icon?: string;
+  component: React.ComponentType<CustomActionProps>;
 }
 
 export interface AssociationDef {

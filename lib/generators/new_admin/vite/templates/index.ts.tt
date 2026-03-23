@@ -1,0 +1,24 @@
+// NewAdmin custom components entry point
+// Register your custom field components, actions, and pages here.
+//
+// The NewAdmin registry is available globally via window.NewAdmin:
+//   window.NewAdmin.registerField(name, component)
+//   window.NewAdmin.registerAction(name, config)
+//   window.NewAdmin.registerPage(path, component)
+//
+// Example:
+//   import ExampleField from "./components/ExampleField"
+//   window.NewAdmin.registerField("ExampleField", ExampleField)
+//
+// Then in your Ruby DSL config:
+//   config.model "Order" do
+//     edit do
+//       field :status, custom_component: "ExampleField"
+//     end
+//   end
+
+import ExampleField from "./components/ExampleField"
+
+if (window.NewAdmin) {
+  window.NewAdmin.registerField("ExampleField", ExampleField)
+}
