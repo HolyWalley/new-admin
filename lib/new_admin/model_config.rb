@@ -81,16 +81,23 @@ module NewAdmin
       end
     end
 
+    DISPLAY_CANDIDATES = %w[name title label number email slug].freeze
+
     def to_s_method
       if @model.instance_methods(false).include?(:to_s)
         :to_s
-      elsif columns.any? { |c| c.name == "name" }
-        :name
-      elsif columns.any? { |c| c.name == "title" }
-        :title
+      elsif (col = DISPLAY_CANDIDATES.find { |c| columns.any? { |cc| cc.name == c } })
+        col.to_sym
       else
         :id
       end
+    end
+
+    # Resolve a human-readable display name for a record of this model
+    def display_name_for(record)
+      record.send(to_s_method).to_s
+    rescue StandardError
+      "#{name} ##{record.id}"
     end
 
     def to_h

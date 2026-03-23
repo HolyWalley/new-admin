@@ -254,7 +254,7 @@ module NewAdmin
       end
 
       {
-        record: { display_name: record.send(model_config.to_s_method).to_s, model: model_config.name },
+        record: { display_name: model_config.display_name_for(record), model: model_config.name },
         cascades: cascades,
         restrict: restrict,
       }
@@ -406,7 +406,7 @@ module NewAdmin
       belongs_to_assocs = @model_config.associations.select { |a| a.macro == :belongs_to && !a.polymorphic? }
 
       records.map do |record|
-        row = { id: record.id, display_name: record.send(@model_config.to_s_method).to_s }
+        row = { id: record.id, display_name: @model_config.display_name_for(record) }
         list_columns.each do |col|
           row[col.name] = read_column_value(record, col)
         end
@@ -420,7 +420,7 @@ module NewAdmin
             target_config = NewAdmin::Introspector.models.find { |m| m.name == related.class.name }
             row["_belongs_to_#{assoc.name}"] = {
               id: related.id,
-              display_name: related.respond_to?(target_config&.to_s_method || :to_s) ? related.send(target_config&.to_s_method || :to_s).to_s : related.to_s,
+              display_name: target_config ? target_config.display_name_for(related) : "#{related.class.name} ##{related.id}",
               param_key: target_config&.param_key,
             }
           end
@@ -437,7 +437,7 @@ module NewAdmin
     end
 
     def serialize_record_for_show(record)
-      row = { id: record.id, display_name: record.send(@model_config.to_s_method).to_s }
+      row = { id: record.id, display_name: @model_config.display_name_for(record) }
       @model_config.columns.each do |col|
         row[col.name] = read_column_value(record, col)
       end
@@ -526,7 +526,7 @@ module NewAdmin
           next unless target_config
 
           records = target_config.model.limit(100).map do |r|
-            { id: r.id, label: r.send(target_config.to_s_method).to_s }
+            { id: r.id, label: target_config.display_name_for(r) }
           end
           hash[assoc.foreign_key] = records
         end
@@ -561,7 +561,7 @@ module NewAdmin
             next unless ref_config
 
             records = ref_config.model.limit(200).map do |r|
-              { id: r.id, label: r.send(ref_config.to_s_method).to_s }
+              { id: r.id, label: ref_config.display_name_for(r) }
             end
             nested_assoc_options[nested_assoc.foreign_key] = records
           end
@@ -608,7 +608,7 @@ module NewAdmin
         next unless target_config
 
         options = target_config.model.limit(200).map do |r|
-          { id: r.id, label: r.send(target_config.to_s_method).to_s }
+          { id: r.id, label: target_config.display_name_for(r) }
         end
         hash[assoc.name] = {
           ids_field: "#{assoc.name.singularize}_ids",
@@ -625,7 +625,7 @@ module NewAdmin
           targets = NewAdmin::Introspector.polymorphic_targets_for(assoc.name)
           hash[assoc.name] = targets.map do |target_config|
             records = target_config.model.limit(100).map do |r|
-              { id: r.id, label: r.send(target_config.to_s_method).to_s }
+              { id: r.id, label: target_config.display_name_for(r) }
             end
             { model_name: target_config.name, param_key: target_config.param_key, records: records }
           end
@@ -644,7 +644,7 @@ module NewAdmin
               target_config = NewAdmin::Introspector.models.find { |m| m.name == related.class.name }
               data[:record] = {
                 id: related.id,
-                display_name: related.respond_to?(@model_config.to_s_method) ? related.send(@model_config.to_s_method).to_s : related.to_s,
+                display_name: target_config ? target_config.display_name_for(related) : "#{related.class.name} ##{related.id}",
                 param_key: target_config&.param_key,
               }
             end
@@ -670,7 +670,7 @@ module NewAdmin
             target_config = NewAdmin::Introspector.models.find { |m| m.name == related.class.name }
             data[:record] = {
               id: related.id,
-              display_name: related.to_s,
+              display_name: target_config ? target_config.display_name_for(related) : "#{related.class.name} ##{related.id}",
               param_key: target_config&.param_key,
             }
           end
