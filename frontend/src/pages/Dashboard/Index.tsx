@@ -12,14 +12,10 @@ import {
   Layers,
   BookOpen,
 } from "lucide-react";
-
-interface Model {
-  name: string;
-  count: number;
-}
+import type { ModelSummary } from "@/types";
 
 interface Props {
-  models: Model[];
+  models: ModelSummary[];
 }
 
 const MODEL_ICONS: Record<string, React.ElementType> = {
@@ -57,7 +53,7 @@ function Dashboard({ models }: Props) {
           return (
             <Link
               key={model.name}
-              href={`/new-admin/${model.name.toLowerCase()}`}
+              href={`/new-admin/${model.param_key}`}
               className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 transition-all hover:border-border/80 hover:shadow-sm dark:hover:border-border/60"
             >
               <div className="flex items-start justify-between">

@@ -13,23 +13,14 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LayoutDashboard, Database, ChevronRight } from "lucide-react";
-
-interface Model {
-  name: string;
-  count: number;
-}
-
-interface SharedProps {
-  models?: Model[];
-  current_model?: string;
-  [key: string]: unknown;
-}
+import { LayoutDashboard, Database, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
+import type { SharedProps } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
   const models = props.models ?? [];
   const currentModel = props.current_model;
+  const flash = props.flash;
   const isDashboard = url === "/new-admin" || url === "/new-admin/";
 
   return (
@@ -68,7 +59,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {models.map((model) => (
                 <SidebarMenuItem key={model.name}>
                   <Link
-                    href={`/new-admin/${model.name.toLowerCase()}`}
+                    href={`/new-admin/${model.param_key}`}
                     className={sidebarMenuLinkClass(
                       currentModel === model.name
                     )}
@@ -102,9 +93,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
           </div>
         </header>
+        <FlashMessages flash={flash} />
         <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function FlashMessages({ flash }: { flash?: SharedProps["flash"] }) {
+  if (!flash?.success && !flash?.error) return null;
+  return (
+    <div className="px-6 pt-4 space-y-2">
+      {flash.success && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/50 dark:text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {flash.success}
+        </div>
+      )}
+      {flash.error && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <XCircle className="h-4 w-4 shrink-0" />
+          {flash.error}
+        </div>
+      )}
+    </div>
   );
 }
 

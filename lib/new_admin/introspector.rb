@@ -16,8 +16,8 @@ module NewAdmin
         @models ||= discover_models.map { |m| ModelConfig.new(m) }
       end
 
-      def model_for(name)
-        models.find { |m| m.name == name }
+      def model_for(param_key)
+        models.find { |m| m.param_key == param_key }
       end
 
       def model_names

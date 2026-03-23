@@ -4,7 +4,7 @@
 
 Build the main CRUD views: dashboard, list, show, new, edit. Support basic field types.
 
-## Status: NOT STARTED
+## Status: COMPLETE
 
 ## Depends on: Phase 2
 

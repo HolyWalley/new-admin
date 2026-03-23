@@ -12,6 +12,10 @@ module NewAdmin
       @model.name
     end
 
+    def param_key
+      name.underscore
+    end
+
     def table_name
       @model.table_name
     end
@@ -92,6 +96,7 @@ module NewAdmin
     def to_h
       {
         name: name,
+        param_key: param_key,
         table_name: table_name,
         primary_key: primary_key,
         count: count,
@@ -109,6 +114,7 @@ module NewAdmin
     def to_summary_h
       {
         name: name,
+        param_key: param_key,
         count: count,
       }
     end

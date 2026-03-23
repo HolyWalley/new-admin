@@ -1,3 +1,6 @@
 NewAdmin::Engine.routes.draw do
   root to: "dashboard#index"
+
+  resources :resources, path: ":model_name", only: [:index, :show, :new, :create, :edit, :update, :destroy],
+    constraints: { model_name: /[a-z][a-z0-9_]*/ }
 end
