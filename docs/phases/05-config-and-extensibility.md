@@ -134,7 +134,7 @@ end
 
 ---
 
-### 5c — Custom Components & Extensibility (NOT STARTED)
+### 5c — Custom Components & Extensibility (DONE)
 
 The "bring your own React" layer. Depends on 5a.
 

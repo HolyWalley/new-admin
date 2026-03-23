@@ -10,20 +10,42 @@ module NewAdmin
 
     inertia_share do
       all_models = NewAdmin::Introspector.models
+      config = NewAdmin.configuration
 
       # Filter models to only those the user can list
       visible_models = all_models.select do |mc|
         authorization_adapter.can?(:list, mc.model)
       end
 
+      # Filter out models hidden via DSL (visible false)
+      visible_models = visible_models.reject do |mc|
+        mc_config = config.model_config_for(mc.name)
+        mc_config && mc_config.nav_visible == false
+      end
+
       shared = {
         models: visible_models.map do |mc|
           summary = mc.to_summary_h
           summary[:permissions] = authorization_adapter.permissions_for(mc.model)
+          # Enrich with per-model navigation config
+          mc_config = config.model_config_for(mc.name)
+          if mc_config
+            summary[:icon] = mc_config.nav_icon if mc_config.nav_icon
+            summary[:weight] = mc_config.nav_weight if mc_config.nav_weight != 0
+          end
           summary
         end,
         flash: { success: flash[:notice], error: flash[:alert] }.compact,
       }
+
+      # Pass navigation groups if configured
+      if config.navigation_config
+        shared[:navigation] = {
+          groups: config.navigation_config.groups.map do |g|
+            { label: g.label, models: g.model_names }
+          end,
+        }
+      end
 
       # Share current user info if available
       if (user = new_admin_current_user)

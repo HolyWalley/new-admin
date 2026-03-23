@@ -11,7 +11,32 @@ NewAdmin.config do |config|
   # Custom components built from app/javascript/new_admin/
   config.custom_scripts "new_admin_custom/custom"
 
+  # Navigation groups: organize sidebar into sections
+  config.navigation do
+    group "Content" do
+      model "Post"
+      model "Page"
+      model "Category"
+      model "Tag"
+    end
+    group "Commerce" do
+      model "Order"
+      model "Product"
+      model "DigitalProduct"
+      model "PhysicalProduct"
+      model "OrderItem"
+    end
+    group "Users" do
+      model "User"
+      model "Address"
+      model "Comment"
+    end
+  end
+
   config.model "Order" do
+    navigation_icon "ShoppingCart"
+    weight 1
+
     list do
       field :number
       field :status
@@ -37,5 +62,24 @@ NewAdmin.config do |config|
       field :created_at
       field :updated_at
     end
+  end
+
+  config.model "User" do
+    navigation_icon "Users"
+    weight 1
+  end
+
+  config.model "Product" do
+    navigation_icon "Box"
+    weight 2
+  end
+
+  config.model "Post" do
+    navigation_icon "PenLine"
+    weight 1
+  end
+
+  config.model "Comment" do
+    navigation_icon "MessageSquare"
   end
 end

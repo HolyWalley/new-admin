@@ -3,7 +3,8 @@
 module NewAdmin
   class Configuration
     attr_reader :model_configurations, :authentication_block, :current_user_proc,
-                :authorization_adapter_name, :authorization_block, :custom_script_paths
+                :authorization_adapter_name, :authorization_block, :custom_script_paths,
+                :navigation_config
 
     def initialize
       @model_configurations = {}
@@ -12,6 +13,7 @@ module NewAdmin
       @authorization_adapter_name = nil
       @authorization_block = nil
       @custom_script_paths = []
+      @navigation_config = nil
     end
 
     # Register a script to load after new_admin's main JS bundle.
@@ -24,6 +26,11 @@ module NewAdmin
       config = ModelConfiguration.new(model_name)
       config.instance_eval(&block) if block
       @model_configurations[model_name] = config
+    end
+
+    def navigation(&block)
+      @navigation_config = NavigationConfig.new
+      @navigation_config.instance_eval(&block)
     end
 
     def model_config_for(model_name)

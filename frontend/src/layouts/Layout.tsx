@@ -36,7 +36,7 @@ import { Toaster, toast } from "sonner";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ModelIcon } from "@/components/ModelIcon";
 import { getAllPages } from "@/lib/registry";
-import type { SharedProps, ModelSummary } from "@/types";
+import type { SharedProps, ModelSummary, NavigationGroup } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
@@ -44,6 +44,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const currentModel = props.current_model;
   const currentUser = props.current_user;
   const flash = props.flash;
+  const navigation = props.navigation;
   const isDashboard = url === "/new-admin" || url === "/new-admin/";
 
   // Show flash messages as toasts
@@ -70,7 +71,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </SidebarMenu>
           </SidebarGroup>
 
-          <ModelNavigation models={models} currentModel={currentModel} />
+          <ModelNavigation models={models} currentModel={currentModel} navigation={navigation} />
         </SidebarContent>
 
         <SidebarFooterUser currentUser={currentUser} />
@@ -166,7 +167,76 @@ function buildNavEntries(models: ModelSummary[]): NavEntry[] {
   return entries;
 }
 
-function ModelNavigation({ models, currentModel }: { models: ModelSummary[]; currentModel?: string }) {
+function sortByWeight(models: ModelSummary[]): ModelSummary[] {
+  return [...models].sort((a, b) => {
+    const wa = a.weight ?? 0;
+    const wb = b.weight ?? 0;
+    if (wa !== wb) return wa - wb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function ModelItem({ model, currentModel }: { model: ModelSummary; currentModel?: string }) {
+  return (
+    <SidebarMenuItem key={model.name}>
+      <SidebarNavLink
+        href={`/new-admin/${model.param_key}`}
+        isActive={currentModel === model.name}
+      >
+        <ModelIcon name={model.name} iconOverride={model.icon} />
+        <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
+        <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
+          {model.count}
+        </SidebarLabel>
+      </SidebarNavLink>
+    </SidebarMenuItem>
+  );
+}
+
+function ModelNavigation({ models, currentModel, navigation }: { models: ModelSummary[]; currentModel?: string; navigation?: SharedProps["navigation"] }) {
+  // When navigation groups are configured, render grouped sections
+  if (navigation?.groups && navigation.groups.length > 0) {
+    const modelMap = new Map(models.map((m) => [m.name, m]));
+    const assigned = new Set<string>();
+
+    const groups = navigation.groups.map((group) => {
+      const groupModels = group.models
+        .map((name) => modelMap.get(name))
+        .filter((m): m is ModelSummary => !!m);
+      groupModels.forEach((m) => assigned.add(m.name));
+      return { label: group.label, models: sortByWeight(groupModels) };
+    });
+
+    // Collect unassigned models into "Other"
+    const unassigned = sortByWeight(models.filter((m) => !assigned.has(m.name)));
+
+    return (
+      <>
+        {groups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarMenu>
+              {group.models.map((model) => (
+                <ModelItem key={model.name} model={model} currentModel={currentModel} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
+        {unassigned.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Other</SidebarGroupLabel>
+            <SidebarMenu>
+              {unassigned.map((model) => (
+                <ModelItem key={model.name} model={model} currentModel={currentModel} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+      </>
+    );
+  }
+
+  // Default: auto-group by STI + namespace
   const entries = buildNavEntries(models);
 
   return (
@@ -194,22 +264,8 @@ function ModelNavigation({ models, currentModel }: { models: ModelSummary[]; cur
               />
             );
           }
-          // Regular model
           const model = entry as ModelSummary;
-          return (
-            <SidebarMenuItem key={model.name}>
-              <SidebarNavLink
-                href={`/new-admin/${model.param_key}`}
-                isActive={currentModel === model.name}
-              >
-                <ModelIcon name={model.name} />
-                <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
-                <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
-                  {model.count}
-                </SidebarLabel>
-              </SidebarNavLink>
-            </SidebarMenuItem>
-          );
+          return <ModelItem key={model.name} model={model} currentModel={currentModel} />;
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -237,7 +293,7 @@ function CollapsibleModelGroup({
           isActive={currentModel === parent.name}
           className="flex-1"
         >
-          <ModelIcon name={parent.name} />
+          <ModelIcon name={parent.name} iconOverride={parent.icon} />
           <SidebarLabel className="flex-1 truncate">{parent.name}</SidebarLabel>
           <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
             {parent.count}

@@ -54,7 +54,7 @@ export function CommandPalette() {
                 key={model.param_key}
                 onSelect={() => navigate(`/new-admin/${model.param_key}`)}
               >
-                <ModelIcon name={model.name} />
+                <ModelIcon name={model.name} iconOverride={model.icon} />
                 <span className="flex-1">{model.name}</span>
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {model.count}

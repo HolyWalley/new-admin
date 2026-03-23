@@ -91,6 +91,13 @@ export interface ModelSummary {
   sti?: boolean;
   sti_base?: boolean;
   permissions?: Permissions;
+  icon?: string;
+  weight?: number;
+}
+
+export interface NavigationGroup {
+  label: string;
+  models: string[];
 }
 
 export type RecordData = Record<string, unknown> & {
@@ -276,5 +283,6 @@ export interface SharedProps {
   current_model?: string;
   current_user?: CurrentUser;
   flash?: Flash;
+  navigation?: { groups: NavigationGroup[] } | null;
   [key: string]: unknown;
 }
