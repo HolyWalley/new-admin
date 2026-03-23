@@ -1,15 +1,17 @@
 import { router } from "@inertiajs/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PaginationMeta, SortState } from "@/types";
+import type { PaginationMeta, SortState, FilterValues } from "@/types";
 
 interface PaginationProps {
   pagination: PaginationMeta;
   modelParamKey: string;
   sort: SortState;
+  search?: string;
+  filters?: FilterValues;
 }
 
-export function Pagination({ pagination, modelParamKey, sort }: PaginationProps) {
+export function Pagination({ pagination, modelParamKey, sort, search, filters }: PaginationProps) {
   const { page, per_page, total, total_pages } = pagination;
 
   if (total_pages <= 1) return null;
@@ -18,9 +20,20 @@ export function Pagination({ pagination, modelParamKey, sort }: PaginationProps)
   const to = Math.min(page * per_page, total);
 
   function goToPage(p: number) {
+    const params: Record<string, string> = {
+      page: String(p),
+      sort: sort.column,
+      direction: sort.direction,
+    };
+    if (search) params.q = search;
+    if (filters) {
+      Object.entries(filters).forEach(([key, val]) => {
+        if (val) params[`f[${key}]`] = val;
+      });
+    }
     router.get(
       `/new-admin/${modelParamKey}`,
-      { page: p, sort: sort.column, direction: sort.direction },
+      params,
       { preserveState: true, preserveScroll: true }
     );
   }

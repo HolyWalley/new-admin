@@ -15,11 +15,42 @@ module NewAdmin
 
     def index
       scope = @model_config.model.all
+      table = @model_config.model.table_name
+
+      # Global search across string/text columns
+      if params[:q].present?
+        searchable = @model_config.columns.select { |c| [:string, :text].include?(c.type) }
+        if searchable.any?
+          conditions = searchable.map { |c| "#{table}.#{c.name} LIKE :q" }.join(" OR ")
+          scope = scope.where(conditions, q: "%#{params[:q]}%")
+        end
+      end
+
+      # Per-column filters
+      if params[:f].is_a?(ActionController::Parameters)
+        params[:f].each do |key, value|
+          next if value.blank?
+
+          col_name = key.sub(/_from$|_to$/, "")
+          col = @model_config.columns.find { |c| c.name == col_name }
+          next unless col
+
+          if key.end_with?("_from")
+            scope = scope.where("#{table}.#{col_name} >= ?", value)
+          elsif key.end_with?("_to")
+            scope = scope.where("#{table}.#{col_name} <= ?", value)
+          elsif col.type == :boolean
+            scope = scope.where("#{table}.#{col_name}" => value == "true")
+          else
+            scope = scope.where("#{table}.#{col_name}" => value)
+          end
+        end
+      end
 
       # Sorting
       sort_column = valid_sort_column(params[:sort]) || @model_config.primary_key
       sort_direction = params[:direction] == "asc" ? "asc" : "desc"
-      scope = scope.reorder(Arel.sql("#{@model_config.model.table_name}.#{sort_column} #{sort_direction}"))
+      scope = scope.reorder(Arel.sql("#{table}.#{sort_column} #{sort_direction}"))
 
       # Pagination
       page = [params[:page].to_i, 1].max
@@ -37,6 +68,8 @@ module NewAdmin
           total_pages: [(total.to_f / per_page).ceil, 1].max,
         },
         sort: { column: sort_column, direction: sort_direction },
+        search: params[:q].to_s,
+        filters: sanitized_filters,
       }
     end
 
@@ -194,6 +227,16 @@ module NewAdmin
       end
 
       params.require(@model_config.param_key.to_sym).permit(*allowed, **array_params)
+    end
+
+    def sanitized_filters
+      return {} unless params[:f].is_a?(ActionController::Parameters)
+
+      valid_columns = @model_config.columns.map(&:name)
+      params[:f].to_unsafe_h.select do |key, _|
+        col_name = key.sub(/_from$|_to$/, "")
+        valid_columns.include?(col_name)
+      end
     end
 
     def valid_sort_column(col)

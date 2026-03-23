@@ -5,16 +5,19 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
-import type { ModelMeta, RecordData, PaginationMeta, SortState } from "@/types";
+import { SearchBar } from "@/components/SearchBar";
+import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterValues } from "@/types";
 
 interface Props {
   model: ModelMeta;
   records: RecordData[];
   pagination: PaginationMeta;
   sort: SortState;
+  search: string;
+  filters: FilterValues;
 }
 
-function ResourceIndex({ model, records, pagination, sort }: Props) {
+function ResourceIndex({ model, records, pagination, sort, search, filters }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
 
   function handleBulkDelete() {
@@ -23,6 +26,22 @@ function ResourceIndex({ model, records, pagination, sort }: Props) {
     router.delete(`/new-admin/${model.param_key}/bulk_destroy`, {
       data: { bulk_ids: Array.from(selectedIds) },
       onSuccess: () => setSelectedIds(new Set()),
+    });
+  }
+
+  function handleFilterChange(newFilters: FilterValues) {
+    const params: Record<string, string> = {
+      sort: sort.column,
+      direction: sort.direction,
+    };
+    if (search) params.q = search;
+    Object.entries(newFilters).forEach(([key, val]) => {
+      if (val) params[`f[${key}]`] = val;
+    });
+    // Reset to page 1 when filters change
+    router.get(`/new-admin/${model.param_key}`, params, {
+      preserveState: true,
+      preserveScroll: true,
     });
   }
 
@@ -45,6 +64,13 @@ function ResourceIndex({ model, records, pagination, sort }: Props) {
         </Link>
       </div>
 
+      <SearchBar
+        value={search}
+        modelParamKey={model.param_key}
+        sort={sort}
+        filters={filters}
+      />
+
       <DataTable
         columns={model.columns}
         records={records}
@@ -54,6 +80,10 @@ function ResourceIndex({ model, records, pagination, sort }: Props) {
         bulkSelectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
+        search={search}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        enums={model.enums}
       />
 
       {selectedIds.size > 0 && (
@@ -76,6 +106,8 @@ function ResourceIndex({ model, records, pagination, sort }: Props) {
         pagination={pagination}
         modelParamKey={model.param_key}
         sort={sort}
+        search={search}
+        filters={filters}
       />
     </div>
   );

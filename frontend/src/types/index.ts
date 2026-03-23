@@ -116,6 +116,8 @@ export interface NestedFormConfigItem {
 
 export type NestedFormData = Record<string, Record<string, unknown> | Record<string, unknown>[]>;
 
+export type FilterValues = Record<string, string>;
+
 export interface Flash {
   success?: string;
   error?: string;

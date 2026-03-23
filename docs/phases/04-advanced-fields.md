@@ -4,7 +4,7 @@
 
 Handle all the complex field types and association patterns that make an admin panel actually useful.
 
-## Status: IN PROGRESS (4a, 4b complete)
+## Status: COMPLETE
 
 ## Depends on: Phase 3
 
@@ -74,16 +74,37 @@ All 13 dummy app models are fully editable through the new admin with correct fi
 
 **E2E tests:** file-upload (2), nested-forms (2) — 4 tests
 
-### 4c — Search & Filtering (NOT STARTED)
+### 4c — Search & Filtering (COMPLETE)
 
-**Search & filtering:**
-- Global search across configured fields
-- Per-column filters (text contains, enum equals, date range, boolean)
-- Filter UI in list view header
+**Global search:**
+- `params[:q]` searches across all string/text columns using `LIKE`
+- SearchBar component with input, submit on Enter, clear button
+- Resets to page 1 on search change
 
-**E2E tests:** none explicit (but improves usability)
+**Per-column filters:**
+- `params[:f]` hash with column name keys
+- enum → `<select>` with enum values from model metadata
+- boolean → `<select>` All/Yes/No
+- date/datetime → two date inputs (from/to) for range queries
+- Collapsible filter row in DataTable header (toggle via Filters button)
+
+**Param preservation:**
+- Search + filter params forwarded through sort clicks and pagination
+- All state reflected in URL query params
+
+**Backend:**
+- `resources_controller#index`: search scope, filter scope applied before sort/pagination
+- `sanitized_filters` helper whitelists valid column names
+- Props: `search`, `filters` passed to frontend
+
+**Frontend:**
+- New component: `SearchBar.tsx`
+- Updated: `DataTable.tsx` (filter row, param preservation), `Pagination.tsx` (param preservation), `Index.tsx` (wiring)
+- New type: `FilterValues`
+
+**E2E tests:** search-and-filtering (5), list adapted (4) — 9 tests
 
 ## Verification
 
-- E2E tests for associations, file-upload, nested-forms, sti, bulk-actions adapted to `/new-admin`
-- All 45 E2E tests passing against new admin
+- E2E tests for associations, file-upload, nested-forms, sti, bulk-actions, search-and-filtering, list adapted to `/new-admin`
+- All E2E tests passing against new admin
