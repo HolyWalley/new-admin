@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
 import {
   SidebarProvider,
@@ -28,13 +29,12 @@ import {
   LayoutDashboard,
   Database,
   ChevronRight,
-  CheckCircle2,
-  XCircle,
   ChevronsUpDown,
   LogOut,
 } from "lucide-react";
+import { Toaster, toast } from "sonner";
 import { CommandPalette } from "@/components/CommandPalette";
-import type { SharedProps } from "@/types";
+import type { SharedProps, ModelSummary } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
@@ -44,8 +44,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const flash = props.flash;
   const isDashboard = url === "/new-admin" || url === "/new-admin/";
 
+  // Show flash messages as toasts
+  useEffect(() => {
+    if (flash?.success) toast.success(flash.success);
+    if (flash?.error) toast.error(flash.error);
+  }, [flash?.success, flash?.error]);
+
   return (
     <SidebarProvider>
+      <Toaster position="bottom-right" richColors closeButton />
       <CommandPalette />
       <Sidebar>
         <SidebarHeaderMenu isDashboard={isDashboard} />
@@ -61,25 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </SidebarMenu>
           </SidebarGroup>
 
-          <SidebarGroup>
-            <SidebarGroupLabel>Models</SidebarGroupLabel>
-            <SidebarMenu>
-              {models.map((model) => (
-                <SidebarMenuItem key={model.name}>
-                  <SidebarNavLink
-                    href={`/new-admin/${model.param_key}`}
-                    isActive={currentModel === model.name}
-                  >
-                    <Database className="h-4 w-4 shrink-0 opacity-40" />
-                    <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
-                    <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
-                      {model.count}
-                    </SidebarLabel>
-                  </SidebarNavLink>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          <ModelNavigation models={models} currentModel={currentModel} />
         </SidebarContent>
 
         <SidebarFooterUser currentUser={currentUser} />
@@ -93,8 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
           </div>
         </header>
-        <FlashMessages flash={flash} />
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 min-w-0">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
@@ -105,6 +93,234 @@ function SidebarLabel({ children, className }: { children: React.ReactNode; clas
   const { open } = useSidebar();
   if (!open) return null;
   return <span className={className}>{children}</span>;
+}
+
+/* ───── Model Navigation: Groups STI + namespaced models ───── */
+
+/** Separate models into: ungrouped flat list, STI groups (parent + children), namespace groups */
+interface StiGroup {
+  type: "sti";
+  parent: ModelSummary;
+  children: ModelSummary[];
+}
+
+interface NamespaceGroup {
+  type: "namespace";
+  label: string;
+  models: ModelSummary[];
+}
+
+type NavEntry = ModelSummary | StiGroup | NamespaceGroup;
+
+function buildNavEntries(models: ModelSummary[]): NavEntry[] {
+  const entries: NavEntry[] = [];
+  const stiGroupMap = new Map<string, StiGroup>();
+  const nsGroupMap = new Map<string, NamespaceGroup>();
+
+  // First pass: find STI base classes and create groups
+  for (const model of models) {
+    if (model.sti_base) {
+      stiGroupMap.set(model.name, { type: "sti", parent: model, children: [] });
+    }
+  }
+
+  // Second pass: categorize all models
+  for (const model of models) {
+    if (model.sti_base) continue; // handled above as group parent
+
+    const group = model.navigation_group;
+    if (group && stiGroupMap.has(group)) {
+      // STI child — add to parent's group
+      stiGroupMap.get(group)!.children.push(model);
+    } else if (group && group.includes("::") || (model.name.includes("::") && group)) {
+      // Namespace group
+      if (!nsGroupMap.has(group)) {
+        nsGroupMap.set(group, { type: "namespace", label: group, models: [] });
+      }
+      nsGroupMap.get(group)!.models.push(model);
+    } else {
+      // Ungrouped
+      entries.push(model);
+    }
+  }
+
+  // Insert STI groups at alphabetical position among entries
+  for (const stiGroup of stiGroupMap.values()) {
+    entries.push(stiGroup);
+  }
+
+  // Insert namespace groups
+  for (const nsGroup of nsGroupMap.values()) {
+    entries.push(nsGroup);
+  }
+
+  // Sort by display name
+  entries.sort((a, b) => {
+    const nameA = "type" in a ? (a.type === "sti" ? a.parent.name : a.label) : a.name;
+    const nameB = "type" in b ? (b.type === "sti" ? b.parent.name : b.label) : b.name;
+    return nameA.localeCompare(nameB);
+  });
+
+  return entries;
+}
+
+function ModelNavigation({ models, currentModel }: { models: ModelSummary[]; currentModel?: string }) {
+  const entries = buildNavEntries(models);
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Models</SidebarGroupLabel>
+      <SidebarMenu>
+        {entries.map((entry) => {
+          if ("type" in entry && entry.type === "sti") {
+            return (
+              <CollapsibleModelGroup
+                key={entry.parent.name}
+                parent={entry.parent}
+                children={entry.children}
+                currentModel={currentModel}
+              />
+            );
+          }
+          if ("type" in entry && entry.type === "namespace") {
+            return (
+              <CollapsibleNamespaceGroup
+                key={entry.label}
+                label={entry.label}
+                models={entry.models}
+                currentModel={currentModel}
+              />
+            );
+          }
+          // Regular model
+          const model = entry as ModelSummary;
+          return (
+            <SidebarMenuItem key={model.name}>
+              <SidebarNavLink
+                href={`/new-admin/${model.param_key}`}
+                isActive={currentModel === model.name}
+              >
+                <Database className="h-4 w-4 shrink-0 opacity-40" />
+                <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
+                <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
+                  {model.count}
+                </SidebarLabel>
+              </SidebarNavLink>
+            </SidebarMenuItem>
+          );
+        })}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
+/** Collapsible STI group: parent is a clickable link + chevron expands children */
+function CollapsibleModelGroup({
+  parent,
+  children,
+  currentModel,
+}: {
+  parent: ModelSummary;
+  children: ModelSummary[];
+  currentModel?: string;
+}) {
+  const { open: sidebarOpen } = useSidebar();
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <SidebarMenuItem>
+      <div className="flex items-center">
+        <SidebarNavLink
+          href={`/new-admin/${parent.param_key}`}
+          isActive={currentModel === parent.name}
+          className="flex-1"
+        >
+          <Database className="h-4 w-4 shrink-0 opacity-40" />
+          <SidebarLabel className="flex-1 truncate">{parent.name}</SidebarLabel>
+          <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
+            {parent.count}
+          </SidebarLabel>
+        </SidebarNavLink>
+        {sidebarOpen && (
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </button>
+        )}
+      </div>
+      {expanded && sidebarOpen && (
+        <ul className="ml-4 mt-0.5 flex flex-col gap-px border-l border-sidebar-border pl-2">
+          {children.map((model) => (
+            <SidebarMenuItem key={model.name}>
+              <SidebarNavLink
+                href={`/new-admin/${model.param_key}`}
+                isActive={currentModel === model.name}
+              >
+                <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
+                <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
+                  {model.count}
+                </SidebarLabel>
+              </SidebarNavLink>
+            </SidebarMenuItem>
+          ))}
+        </ul>
+      )}
+    </SidebarMenuItem>
+  );
+}
+
+/** Collapsible namespace group: label header + expand to show models */
+function CollapsibleNamespaceGroup({
+  label,
+  models,
+  currentModel,
+}: {
+  label: string;
+  models: ModelSummary[];
+  currentModel?: string;
+}) {
+  const { open: sidebarOpen } = useSidebar();
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <SidebarMenuItem>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className={sidebarMenuLinkClass(false)}
+      >
+        <Database className="h-4 w-4 shrink-0 opacity-40" />
+        {sidebarOpen && (
+          <>
+            <span className="flex-1 truncate">{label}</span>
+            <ChevronRight className={`h-3.5 w-3.5 text-sidebar-foreground/40 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </>
+        )}
+      </button>
+      {expanded && sidebarOpen && (
+        <ul className="ml-4 mt-0.5 flex flex-col gap-px border-l border-sidebar-border pl-2">
+          {models.map((model) => (
+            <SidebarMenuItem key={model.name}>
+              <SidebarNavLink
+                href={`/new-admin/${model.param_key}`}
+                isActive={currentModel === model.name}
+              >
+                <SidebarLabel className="flex-1 truncate">
+                  {model.name.replace(`${label}::`, "")}
+                </SidebarLabel>
+                <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
+                  {model.count}
+                </SidebarLabel>
+              </SidebarNavLink>
+            </SidebarMenuItem>
+          ))}
+        </ul>
+      )}
+    </SidebarMenuItem>
+  );
 }
 
 /* ───── Sidebar Header: App menu dropdown ───── */
@@ -218,37 +434,17 @@ function SidebarFooterUser({ currentUser }: { currentUser?: SharedProps["current
   );
 }
 
-function SidebarNavLink({ href, isActive, children }: { href: string; isActive?: boolean; children: React.ReactNode }) {
+function SidebarNavLink({ href, isActive, children, className }: { href: string; isActive?: boolean; children: React.ReactNode; className?: string }) {
   const { open, setMobileOpen } = useSidebar();
   return (
     <Link
       href={href}
-      className={sidebarMenuLinkClass(isActive)}
+      className={`${sidebarMenuLinkClass(isActive)} ${className ?? ""}`}
       title={!open ? String((children as React.ReactNode[])?.[1] ?? "") : undefined}
       onClick={() => setMobileOpen(false)}
     >
       {children}
     </Link>
-  );
-}
-
-function FlashMessages({ flash }: { flash?: SharedProps["flash"] }) {
-  if (!flash?.success && !flash?.error) return null;
-  return (
-    <div className="px-6 pt-4 space-y-2">
-      {flash.success && (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/50 dark:text-emerald-200">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          {flash.success}
-        </div>
-      )}
-      {flash.error && (
-        <div className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          <XCircle className="h-4 w-4 shrink-0" />
-          {flash.error}
-        </div>
-      )}
-    </div>
   );
 }
 

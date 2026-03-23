@@ -111,11 +111,26 @@ module NewAdmin
       }
     end
 
+    def navigation_group
+      # STI children grouped under their base class
+      if sti?
+        @model.base_class.name
+      # Namespaced models grouped by their namespace
+      elsif name.include?("::")
+        name.deconstantize
+      else
+        nil
+      end
+    end
+
     def to_summary_h
       {
         name: name,
         param_key: param_key,
         count: count,
+        navigation_group: navigation_group,
+        sti: sti?,
+        sti_base: sti_base?,
       }
     end
 

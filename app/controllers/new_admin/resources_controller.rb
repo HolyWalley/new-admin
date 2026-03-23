@@ -2,8 +2,6 @@
 
 module NewAdmin
   class ResourcesController < ApplicationController
-    include Rails.application.routes.url_helpers
-
     before_action :set_model_config
     before_action :set_record, only: [:show, :edit, :update, :destroy]
 
@@ -375,10 +373,10 @@ module NewAdmin
         filename: attachment.filename.to_s,
         content_type: attachment.content_type,
         byte_size: attachment.byte_size,
-        url: url_for(attachment),
+        url: main_app.url_for(attachment),
       }
       if attachment.image?
-        data[:thumbnail_url] = url_for(attachment.variant(resize_to_limit: [200, 200]))
+        data[:thumbnail_url] = main_app.url_for(attachment.variant(resize_to_limit: [200, 200]))
       end
       data
     rescue => e

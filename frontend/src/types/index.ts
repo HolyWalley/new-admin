@@ -51,6 +51,9 @@ export interface ModelSummary {
   name: string;
   param_key: string;
   count: number;
+  navigation_group?: string | null;
+  sti?: boolean;
+  sti_base?: boolean;
 }
 
 export type RecordData = Record<string, unknown> & {

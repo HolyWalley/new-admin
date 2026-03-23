@@ -263,7 +263,7 @@ export function SidebarInset({
   className?: string;
 }) {
   return (
-    <main className={cn("flex flex-1 flex-col min-h-svh", className)}>
+    <main className={cn("flex flex-1 flex-col min-h-svh min-w-0", className)}>
       {children}
     </main>
   );
