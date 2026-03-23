@@ -18,7 +18,7 @@ A modern, drop-in admin panel for Rails — built with React, shadcn/ui, and Ine
 
 ## Requirements
 
-- Ruby >= 4.0
+- Ruby >= 3.4
 - Rails >= 8.0
 - [inertia_rails](https://github.com/inertiajs/inertia-rails) >= 3.0
 

@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description = "A drop-in replacement for rails_admin using React, shadcn/ui, and Inertia.js"
   spec.license     = "MIT"
 
-  spec.required_ruby_version = ">= 4.0"
+  spec.required_ruby_version = ">= 3.4"
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["{app,config,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
