@@ -10,8 +10,9 @@ A modern, drop-in admin panel for Rails — built with React, shadcn/ui, and Ine
 - **Smart field types** — booleans, dates, enums (as badges), belongs_to dropdowns, has_many through multi-selects, rich text (Trix), file uploads (ActiveStorage), polymorphic associations, nested forms
 - **Delete cascade preview** — shows what will be affected before destroying a record
 - **Ruby DSL** — configure fields per view, navigation groups, icons, visibility, and ordering
+- **Custom actions** — server-defined actions with Ruby handlers (zero JS), model scoping, confirm dialogs, member & collection types, display modes (inline/modal/page)
 - **Authentication & authorization** — plug in Devise, Pundit, CanCanCan, or a custom block
-- **Custom components** — register your own React field editors, row actions, and full pages
+- **Custom components** — register your own React field editors, action overrides, and full pages
 - **Command palette** — Cmd+K to jump to any model or custom page
 - **Dark mode** — automatic, based on system preference
 - **Prebuilt assets** — no Node.js required for end users; Vite scaffold available for custom components
@@ -221,19 +222,11 @@ config.custom_scripts "new_admin_custom/custom"
 ```ts
 // app/javascript/new_admin/index.ts
 import OrderStatusSelect from "./components/OrderStatusSelect"
-import ArchiveAction from "./components/ArchiveAction"
 import AnalyticsDashboard from "./components/AnalyticsDashboard"
 
 if (window.NewAdmin) {
   window.NewAdmin.registerField("OrderStatusSelect", OrderStatusSelect)
-  window.NewAdmin.registerAction("archive", {
-    label: "Archive",
-    icon: "archive",
-    component: ArchiveAction,
-  })
-  window.NewAdmin.registerPage("analytics", AnalyticsDashboard, {
-    label: "Analytics",
-  })
+  window.NewAdmin.registerPage("analytics", AnalyticsDashboard, { label: "Analytics" })
 }
 ```
 
@@ -291,36 +284,117 @@ export default function OrderStatusSelect({ value, onChange, field, error, help 
 
 ### Custom Actions
 
-Actions appear in every row's action cell in the data table.
+Actions can be defined in Ruby (with zero JS needed) or as pure-frontend React components.
+
+#### Server-Defined Actions (Ruby DSL)
+
+Define actions in your initializer. They get auto-generated UI — no JavaScript needed:
+
+```ruby
+NewAdmin.config do |config|
+  # Member action — button in each row
+  config.action :archive do
+    only "Order", "Post"          # model scoping (omit = all models)
+    member                         # row-level action (default)
+    icon "Archive"                 # Lucide icon name
+    label "Archive"
+    confirm "Archive this record?" # confirmation dialog before POST
+
+    handler do
+      @record.update!(archived: true)
+      { success: "#{@record.class.name} archived" }
+    end
+  end
+
+  # Collection action — button above the table
+  config.action :export_csv do
+    only "Order"
+    collection
+    icon "Download"
+    label "Export CSV"
+
+    handler do
+      csv = @scope.limit(1000).map { |r| [r.id, r.number, r.status].join(",") }.join("\n")
+      { download: { data: "id,number,status\n#{csv}", filename: "orders.csv", content_type: "text/csv" } }
+    end
+  end
+end
+```
+
+**DSL methods:**
+
+| Method | Default | Description |
+|--------|---------|-------------|
+| `only(*models)` | all models | Restrict to specific model classes (use strings) |
+| `except(*models)` | none | Exclude specific models |
+| `member` / `collection` | `member` | Row-level vs table-level action |
+| `icon(name)` | nil | Lucide icon name (e.g., "Archive", "Download") |
+| `label(text)` | `name.humanize` | Button label |
+| `confirm(msg)` | nil | Show confirmation dialog before executing |
+| `display(mode)` | `:inline` | `:inline`, `:modal`, or `:page` |
+| `http_methods(*methods)` | `[:post]` | HTTP methods the handler responds to |
+| `visible(&block)` | always visible | Block receives `(record, user)` for member actions |
+| `handler(&block)` | none | Server-side logic block |
+
+**Handler context** — available inside the `handler` block:
+
+| Name | Description |
+|------|-------------|
+| `@record` | The record (member actions) |
+| `@scope` | `Model.all` scope (collection actions) |
+| `params` | Request params |
+| `request` | HTTP request object |
+| `current_user` | Authenticated user |
+
+**Handler return values:**
+
+```ruby
+{ success: "msg" }                        # flash notice + redirect back
+{ error: "msg" }                          # flash alert + redirect back
+{ redirect: "/path" }                     # redirect to path
+{ download: { data:, filename: } }        # file download
+```
+
+**Display modes:**
+
+- `:inline` — button in the row (member) or toolbar (collection). Click triggers POST directly.
+- `:modal` — opens a dialog. Supports GET to fetch data, then POST to execute.
+- `:page` — full page at `/new-admin/:model/:id/actions/:name`.
+
+**Authorization:** member actions require `:update` permission, collection actions require `:list`.
+
+#### Custom React Component Override
+
+You can optionally register a React component that replaces the auto-generated UI for a server-defined action:
+
+```ts
+window.NewAdmin.registerAction("archive", {
+  component: MyCustomArchiveButton,
+})
+```
+
+The server-defined metadata (scoping, icon, label) still applies — only the rendering is overridden.
+
+#### Pure-Frontend Actions
+
+Actions can also be fully client-side with no Ruby handler:
+
+```ts
+window.NewAdmin.registerAction("quick_copy", {
+  label: "Copy ID",
+  icon: "clipboard",
+  component: CopyIdButton,
+})
+```
 
 **Props interface:**
 
 ```ts
 interface CustomActionProps {
   record?: RecordData         // { id, display_name, ...columns }
-  selectedIds?: Set<string>   // for future bulk actions
+  selectedIds?: Set<string>   // for bulk actions
   modelParamKey: string       // URL param key (e.g. "order")
   modelName: string           // human name (e.g. "Order")
-}
-```
-
-**Example** — archive button:
-
-```tsx
-export default function ArchiveAction({ record, modelName }: CustomActionProps) {
-  if (!record) return null
-
-  function handleArchive() {
-    if (!confirm(`Archive ${modelName} "${record!.display_name}"?`)) return
-    fetch(`/api/archive/${record!.id}`, { method: "POST" })
-  }
-
-  return (
-    <button type="button" onClick={handleArchive} title="Archive"
-      style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>
-      Archive
-    </button>
-  )
 }
 ```
 
