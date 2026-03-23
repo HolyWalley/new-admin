@@ -83,6 +83,22 @@ export type AssociationOptions = Record<
   Array<{ id: number; label: string }>
 >;
 
+export interface HasManyThroughOption {
+  ids_field: string;
+  options: Array<{ id: number; label: string }>;
+  target_model: string;
+}
+
+export type HasManyThroughOptions = Record<string, HasManyThroughOption>;
+
+export interface PolymorphicTarget {
+  model_name: string;
+  param_key: string;
+  records: Array<{ id: number; label: string }>;
+}
+
+export type PolymorphicOptions = Record<string, PolymorphicTarget[]>;
+
 export interface Flash {
   success?: string;
   error?: string;

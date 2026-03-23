@@ -2,9 +2,8 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Associations", () => {
   test("belongs_to shows a select for the association", async ({ page }) => {
-    await page.goto("/admin/post/new");
+    await page.goto("/new-admin/post/new");
 
-    // rails_admin uses select with data-filteringselect for belongs_to
     const userSelect = page.locator(
       'select[name="post[user_id]"], #post_user_id'
     );
@@ -12,7 +11,7 @@ test.describe("Associations", () => {
   });
 
   test("belongs_to optional allows blank selection", async ({ page }) => {
-    await page.goto("/admin/post/new");
+    await page.goto("/new-admin/post/new");
 
     const categorySelect = page.locator("#post_category_id");
     if (await categorySelect.isVisible()) {
@@ -24,16 +23,16 @@ test.describe("Associations", () => {
 
   test("has_many is shown on the show page", async ({ page }) => {
     // Go to category show page (categories have has_many :posts)
-    await page.goto("/admin/category");
+    await page.goto("/new-admin/category");
     // The table itself shows has_many columns
     const postColumn = page.locator("th.posts_field");
     await expect(postColumn).toBeVisible();
   });
 
   test("many-to-many shows multi-select widget", async ({ page }) => {
-    await page.goto("/admin/post/new");
+    await page.goto("/new-admin/post/new");
 
-    // Tags (has_many through) should use filteringmultiselect
+    // Tags (has_many through) should use multi-select
     const tagSelect = page.locator(
       'select[name="post[tag_ids][]"], #post_tag_ids'
     );
@@ -41,16 +40,16 @@ test.describe("Associations", () => {
   });
 
   test("self-referential belongs_to shows parent dropdown", async ({ page }) => {
-    await page.goto("/admin/category/new");
+    await page.goto("/new-admin/category/new");
 
     const parentSelect = page.locator("#category_parent_id");
     await expect(parentSelect).toBeAttached();
   });
 
   test("polymorphic association shows type and id fields", async ({ page }) => {
-    await page.goto("/admin/comment/new");
+    await page.goto("/new-admin/comment/new");
 
-    // Rails admin shows polymorphic as a special widget
+    // Polymorphic shows type and id fields
     const commentableField = page.locator(
       '[id*="commentable"], select[name*="commentable"]'
     );

@@ -9,11 +9,12 @@ interface BooleanFieldProps {
   required?: boolean;
   disabled?: boolean;
   nullable?: boolean;
+  htmlId?: string;
 }
 
-export function BooleanField({ name, label, value, onChange, error, required, disabled, nullable }: BooleanFieldProps) {
+export function BooleanField({ name, label, value, onChange, error, required, disabled, nullable, htmlId }: BooleanFieldProps) {
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
       <div className="flex items-center gap-4 pt-1">
         <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
           <input

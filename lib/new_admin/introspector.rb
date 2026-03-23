@@ -24,6 +24,14 @@ module NewAdmin
         models.map(&:name)
       end
 
+      def polymorphic_targets_for(as_name)
+        models.select do |mc|
+          mc.model.reflect_on_all_associations(:has_many).any? do |r|
+            r.options[:as]&.to_s == as_name
+          end
+        end
+      end
+
       def reset!
         @models = nil
       end

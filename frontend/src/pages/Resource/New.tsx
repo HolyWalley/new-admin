@@ -2,16 +2,18 @@ import Layout from "@/layouts/Layout";
 import { Link } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { ResourceForm } from "@/components/ResourceForm";
-import type { ModelMeta, AssociationOptions } from "@/types";
+import type { ModelMeta, AssociationOptions, HasManyThroughOptions, PolymorphicOptions } from "@/types";
 
 interface Props {
   model: ModelMeta;
   record: Record<string, unknown>;
   association_options: AssociationOptions;
+  has_many_through_options?: HasManyThroughOptions;
+  polymorphic_options?: PolymorphicOptions;
   errors: Record<string, string[]>;
 }
 
-function ResourceNew({ model, record, association_options, errors }: Props) {
+function ResourceNew({ model, record, association_options, has_many_through_options, polymorphic_options, errors }: Props) {
   return (
     <div className="space-y-6">
       <div>
@@ -27,6 +29,8 @@ function ResourceNew({ model, record, association_options, errors }: Props) {
         model={model}
         record={record}
         associationOptions={association_options}
+        hasManyThroughOptions={has_many_through_options}
+        polymorphicOptions={polymorphic_options}
         errors={errors}
         action="create"
       />

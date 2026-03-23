@@ -9,14 +9,15 @@ interface TextFieldProps {
   error?: string[];
   required?: boolean;
   disabled?: boolean;
+  htmlId?: string;
 }
 
-export function TextField({ name, label, value, onChange, error, required, disabled }: TextFieldProps) {
+export function TextField({ name, label, value, onChange, error, required, disabled, htmlId }: TextFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
       <textarea
-        id={name}
+        id={htmlId ?? name}
         name={name}
         rows={4}
         value={value ?? ""}

@@ -7,3 +7,5 @@ export { DateTimeField } from "./DateTimeField";
 export { DateField } from "./DateField";
 export { EnumField } from "./EnumField";
 export { SelectField } from "./SelectField";
+export { MultiSelectField } from "./MultiSelectField";
+export { PolymorphicField } from "./PolymorphicField";

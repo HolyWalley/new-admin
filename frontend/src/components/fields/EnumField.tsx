@@ -11,14 +11,15 @@ interface EnumFieldProps {
   disabled?: boolean;
   options: string[];
   nullable?: boolean;
+  htmlId?: string;
 }
 
-export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable }: EnumFieldProps) {
+export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable, htmlId }: EnumFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
       <select
-        id={name}
+        id={htmlId ?? name}
         name={name}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}

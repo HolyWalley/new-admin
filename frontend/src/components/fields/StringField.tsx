@@ -10,14 +10,15 @@ interface StringFieldProps {
   error?: string[];
   required?: boolean;
   disabled?: boolean;
+  htmlId?: string;
 }
 
-export function StringField({ name, label, value, onChange, error, required, disabled }: StringFieldProps) {
+export function StringField({ name, label, value, onChange, error, required, disabled, htmlId }: StringFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
       <Input
-        id={name}
+        id={htmlId ?? name}
         name={name}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}

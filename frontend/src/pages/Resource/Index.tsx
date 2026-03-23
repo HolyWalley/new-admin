@@ -1,6 +1,7 @@
+import { useState } from "react";
 import Layout from "@/layouts/Layout";
-import { Link } from "@inertiajs/react";
-import { Plus } from "lucide-react";
+import { Link, router } from "@inertiajs/react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
@@ -14,6 +15,17 @@ interface Props {
 }
 
 function ResourceIndex({ model, records, pagination, sort }: Props) {
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
+
+  function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected ${selectedIds.size === 1 ? "record" : "records"}?`)) return;
+    router.delete(`/new-admin/${model.param_key}/bulk_destroy`, {
+      data: { bulk_ids: Array.from(selectedIds) },
+      onSuccess: () => setSelectedIds(new Set()),
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -38,7 +50,27 @@ function ResourceIndex({ model, records, pagination, sort }: Props) {
         records={records}
         sort={sort}
         modelParamKey={model.param_key}
+        associations={model.associations}
+        bulkSelectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
+
+      {selectedIds.size > 0 && (
+        <div className="sticky bottom-4 flex items-center gap-3 rounded-lg border border-border bg-background p-3 shadow-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} {selectedIds.size === 1 ? "item" : "items"} selected
+          </span>
+          <a
+            className="bulk-link inline-flex items-center gap-1.5 rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground cursor-pointer hover:bg-destructive/90 transition-colors"
+            data-action="bulk_delete"
+            onClick={handleBulkDelete}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete selected
+          </a>
+        </div>
+      )}
 
       <Pagination
         pagination={pagination}

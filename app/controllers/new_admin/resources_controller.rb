@@ -53,6 +53,8 @@ module NewAdmin
         model: model_metadata,
         record: default_values,
         association_options: association_options_for_form,
+        has_many_through_options: has_many_through_options_for_form,
+        polymorphic_options: polymorphic_options_for_form,
         errors: {},
       }
     end
@@ -68,6 +70,8 @@ module NewAdmin
           model: model_metadata,
           record: permitted_params.to_h,
           association_options: association_options_for_form,
+          has_many_through_options: has_many_through_options_for_form,
+          polymorphic_options: polymorphic_options_for_form,
           errors: record.errors.to_hash(true),
         }
       end
@@ -78,6 +82,8 @@ module NewAdmin
         model: model_metadata,
         record: serialize_record_for_form(@record),
         association_options: association_options_for_form,
+        has_many_through_options: has_many_through_options_for_form,
+        polymorphic_options: polymorphic_options_for_form,
         errors: {},
       }
     end
@@ -91,6 +97,8 @@ module NewAdmin
           model: model_metadata,
           record: serialize_record_for_form(@record),
           association_options: association_options_for_form,
+          has_many_through_options: has_many_through_options_for_form,
+          polymorphic_options: polymorphic_options_for_form,
           errors: @record.errors.to_hash(true),
         }
       end
@@ -103,6 +111,18 @@ module NewAdmin
     rescue ActiveRecord::DeleteRestrictionError => e
       redirect_to resources_path(params[:model_name]),
         alert: e.message
+    end
+
+    def bulk_destroy
+      ids = params[:bulk_ids]
+      if ids.present?
+        count = @model_config.model.where(id: ids).destroy_all.size
+        redirect_to resources_path(params[:model_name]),
+          notice: "#{count} #{count == 1 ? 'record' : 'records'} deleted"
+      else
+        redirect_to resources_path(params[:model_name]),
+          alert: "No records selected"
+      end
     end
 
     private
@@ -135,7 +155,13 @@ module NewAdmin
 
     def permitted_params
       allowed = editable_columns.map { |c| c.name.to_sym }
-      params.require(@model_config.param_key.to_sym).permit(*allowed)
+      # Allow has_many :through ID arrays (e.g., tag_ids: [])
+      array_params = {}
+      through_associations.each do |assoc|
+        ids_field = "#{assoc.name.singularize}_ids"
+        array_params[ids_field.to_sym] = []
+      end
+      params.require(@model_config.param_key.to_sym).permit(*allowed, **array_params)
     end
 
     def valid_sort_column(col)
@@ -144,10 +170,15 @@ module NewAdmin
     end
 
     def serialize_records_for_list(records)
+      has_many_assocs = @model_config.associations.select { |a| [:has_many, :has_many_through].include?(a.macro) }
+
       records.map do |record|
         row = { id: record.id, display_name: record.send(@model_config.to_s_method).to_s }
         list_columns.each do |col|
           row[col.name] = read_column_value(record, col)
+        end
+        has_many_assocs.each do |assoc|
+          row["_assoc_#{assoc.name}"] = record.send(assoc.name).count rescue 0
         end
         row
       end
@@ -166,6 +197,11 @@ module NewAdmin
       editable_columns.each do |col|
         row[col.name] = read_column_value(record, col)
       end
+      # Include has_many :through current IDs
+      through_associations.each do |assoc|
+        ids_method = "#{assoc.name.singularize}_ids"
+        row[ids_method] = record.send(ids_method) if record.respond_to?(ids_method)
+      end
       row
     end
 
@@ -182,6 +218,9 @@ module NewAdmin
       editable_columns.each do |col|
         row[col.name] = col.default
       end
+      through_associations.each do |assoc|
+        row["#{assoc.name.singularize}_ids"] = []
+      end
       row
     end
 
@@ -196,6 +235,40 @@ module NewAdmin
             { id: r.id, label: r.send(target_config.to_s_method).to_s }
           end
           hash[assoc.foreign_key] = records
+        end
+    end
+
+    def through_associations
+      @through_associations ||= @model_config.associations.select(&:through?)
+    end
+
+    def has_many_through_options_for_form
+      through_associations.each_with_object({}) do |assoc, hash|
+        target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+        next unless target_config
+
+        options = target_config.model.limit(200).map do |r|
+          { id: r.id, label: r.send(target_config.to_s_method).to_s }
+        end
+        hash[assoc.name] = {
+          ids_field: "#{assoc.name.singularize}_ids",
+          options: options,
+          target_model: assoc.target_model_name,
+        }
+      end
+    end
+
+    def polymorphic_options_for_form
+      @model_config.associations
+        .select(&:polymorphic?)
+        .each_with_object({}) do |assoc, hash|
+          targets = NewAdmin::Introspector.polymorphic_targets_for(assoc.name)
+          hash[assoc.name] = targets.map do |target_config|
+            records = target_config.model.limit(100).map do |r|
+              { id: r.id, label: r.send(target_config.to_s_method).to_s }
+            end
+            { model_name: target_config.name, param_key: target_config.param_key, records: records }
+          end
         end
     end
 

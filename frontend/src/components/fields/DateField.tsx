@@ -10,18 +10,19 @@ interface DateFieldProps {
   error?: string[];
   required?: boolean;
   disabled?: boolean;
+  htmlId?: string;
 }
 
-export function DateField({ name, label, value, onChange, error, required, disabled }: DateFieldProps) {
+export function DateField({ name, label, value, onChange, error, required, disabled, htmlId }: DateFieldProps) {
   const hasError = error && error.length > 0;
 
   // Convert ISO date to YYYY-MM-DD format
   const inputValue = value ? toDateInput(String(value)) : "";
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
       <Input
-        id={name}
+        id={htmlId ?? name}
         name={name}
         type="date"
         value={inputValue}

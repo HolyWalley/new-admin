@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Bulk actions", () => {
   test("checkboxes appear on list view for bulk selection", async ({ page }) => {
-    await page.goto("/admin/tag");
+    await page.goto("/new-admin/tag");
 
     // Row checkboxes
     const checkboxes = page.locator('input[name="bulk_ids[]"]');
@@ -10,7 +10,7 @@ test.describe("Bulk actions", () => {
   });
 
   test("select all checkbox toggles all rows", async ({ page }) => {
-    await page.goto("/admin/tag");
+    await page.goto("/new-admin/tag");
 
     const selectAll = page.locator("input.toggle");
     await selectAll.check();
@@ -23,7 +23,7 @@ test.describe("Bulk actions", () => {
   });
 
   test("bulk delete action is available", async ({ page }) => {
-    await page.goto("/admin/tag");
+    await page.goto("/new-admin/tag");
 
     // Check a row
     await page.locator('input[name="bulk_ids[]"]').first().check();
