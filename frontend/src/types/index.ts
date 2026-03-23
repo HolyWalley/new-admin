@@ -76,6 +76,8 @@ export interface AssociationData {
   target_model: string | null;
   record?: { id: number; display_name: string; param_key: string };
   count?: number;
+  param_key?: string;
+  foreign_key?: string;
 }
 
 export type AssociationOptions = Record<
@@ -103,6 +105,8 @@ export interface AttachmentInfo {
   filename: string;
   content_type?: string;
   byte_size?: number;
+  url?: string;
+  thumbnail_url?: string;
 }
 
 export interface NestedFormConfigItem {

@@ -2,6 +2,8 @@
 
 module NewAdmin
   class ResourcesController < ApplicationController
+    include Rails.application.routes.url_helpers
+
     before_action :set_model_config
     before_action :set_record, only: [:show, :edit, :update, :destroy]
 
@@ -287,6 +289,7 @@ module NewAdmin
 
     def serialize_records_for_list(records)
       has_many_assocs = @model_config.associations.select { |a| [:has_many, :has_many_through].include?(a.macro) }
+      belongs_to_assocs = @model_config.associations.select { |a| a.macro == :belongs_to && !a.polymorphic? }
 
       records.map do |record|
         row = { id: record.id, display_name: record.send(@model_config.to_s_method).to_s }
@@ -296,6 +299,25 @@ module NewAdmin
         has_many_assocs.each do |assoc|
           row["_assoc_#{assoc.name}"] = record.send(assoc.name).count rescue 0
         end
+        # Include belongs_to display names for foreign key columns
+        belongs_to_assocs.each do |assoc|
+          related = record.send(assoc.name) rescue nil
+          if related
+            target_config = NewAdmin::Introspector.models.find { |m| m.name == related.class.name }
+            row["_belongs_to_#{assoc.name}"] = {
+              id: related.id,
+              display_name: related.respond_to?(target_config&.to_s_method || :to_s) ? related.send(target_config&.to_s_method || :to_s).to_s : related.to_s,
+              param_key: target_config&.param_key,
+            }
+          end
+        end
+        # Include attachment metadata with URLs
+        @model_config.attachment_attributes.each do |att|
+          attachment = record.send(att[:name])
+          if attachment.attached?
+            row["_attachment_#{att[:name]}"] = serialize_attachment(attachment)
+          end
+        end
         row
       end
     end
@@ -304,6 +326,13 @@ module NewAdmin
       row = { id: record.id, display_name: record.send(@model_config.to_s_method).to_s }
       @model_config.columns.each do |col|
         row[col.name] = read_column_value(record, col)
+      end
+      # Include attachment metadata with URLs
+      @model_config.attachment_attributes.each do |att|
+        attachment = record.send(att[:name])
+        if attachment.attached?
+          row["_attachment_#{att[:name]}"] = serialize_attachment(attachment)
+        end
       end
       row
     end
@@ -318,15 +347,11 @@ module NewAdmin
         ids_method = "#{assoc.name.singularize}_ids"
         row[ids_method] = record.send(ids_method) if record.respond_to?(ids_method)
       end
-      # Include attachment metadata
+      # Include attachment metadata with URLs
       @model_config.attachment_attributes.each do |att|
         attachment = record.send(att[:name])
         if attachment.attached?
-          row["_attachment_#{att[:name]}"] = {
-            filename: attachment.filename.to_s,
-            content_type: attachment.content_type,
-            byte_size: attachment.byte_size,
-          }
+          row["_attachment_#{att[:name]}"] = serialize_attachment(attachment)
         end
       end
       # Include rich text content
@@ -343,6 +368,26 @@ module NewAdmin
       else
         record.read_attribute(col.name)
       end
+    end
+
+    def serialize_attachment(attachment)
+      data = {
+        filename: attachment.filename.to_s,
+        content_type: attachment.content_type,
+        byte_size: attachment.byte_size,
+        url: url_for(attachment),
+      }
+      if attachment.image?
+        data[:thumbnail_url] = url_for(attachment.variant(resize_to_limit: [200, 200]))
+      end
+      data
+    rescue => e
+      # Fallback if URL generation fails (e.g., missing service)
+      {
+        filename: attachment.filename.to_s,
+        content_type: attachment.content_type,
+        byte_size: attachment.byte_size,
+      }
     end
 
     def default_values
@@ -492,6 +537,19 @@ module NewAdmin
           end
         when :has_many, :has_many_through
           data[:count] = record.send(assoc.name).count rescue 0
+          if assoc.through?
+            # For has_many_through, link to the join model filtered by source FK
+            through_assoc = @model_config.associations.find { |a| a.name == assoc.through }
+            if through_assoc
+              through_config = NewAdmin::Introspector.models.find { |m| m.name == through_assoc.target_model_name }
+              data[:param_key] = through_config&.param_key
+              data[:foreign_key] = through_assoc.foreign_key
+            end
+          else
+            target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+            data[:param_key] = target_config&.param_key
+            data[:foreign_key] = assoc.foreign_key
+          end
         when :has_one
           related = record.send(assoc.name) rescue nil
           if related

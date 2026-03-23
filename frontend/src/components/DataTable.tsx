@@ -2,7 +2,14 @@ import { router, Link } from "@inertiajs/react";
 import { ArrowUp, ArrowDown, ArrowUpDown, Eye, Pencil, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule } from "@/types";
+import type { ColumnDef, RecordData, SortState, AssociationDef, FilterRule, AttachmentInfo } from "@/types";
+import { FileIcon } from "lucide-react";
+
+interface BelongsToData {
+  id: number;
+  display_name: string;
+  param_key: string;
+}
 
 interface DataTableProps {
   columns: ColumnDef[];
@@ -10,6 +17,7 @@ interface DataTableProps {
   sort: SortState;
   modelParamKey: string;
   associations?: AssociationDef[];
+  attachmentAttributes?: Array<{ name: string; multiple: boolean }>;
   bulkSelectable?: boolean;
   selectedIds?: Set<number | string>;
   onSelectionChange?: (selectedIds: Set<number | string>) => void;
@@ -29,6 +37,7 @@ export function serializeFilters(params: Record<string, string>, filters: Filter
 
 export function DataTable({
   columns, records, sort, modelParamKey, associations,
+  attachmentAttributes,
   bulkSelectable, selectedIds, onSelectionChange,
   search, filters, onCellFilter,
 }: DataTableProps) {
@@ -39,6 +48,39 @@ export function DataTable({
   const hasManyAssocs = (associations ?? []).filter(
     (a) => a.type === "has_many" || a.type === "has_many_through"
   );
+
+  // Map foreign key column names to their belongs_to association name
+  // e.g. "category_id" -> "category", "author_id" -> "author"
+  const fkMap = new Map<string, string>();
+  (associations ?? []).forEach((assoc) => {
+    if (assoc.type === "belongs_to" && assoc.foreign_key) {
+      fkMap.set(assoc.foreign_key, assoc.name);
+    }
+  });
+
+  // Resolve the correct link target for has_many associations.
+  // For has_many_through, link to the join model with the source FK.
+  function getAssocLink(assoc: AssociationDef): { paramKey: string; foreignKey: string } | null {
+    if (assoc.type === "has_many_through" && assoc.through) {
+      // Find the through (join) association and use its target + FK
+      const throughAssoc = (associations ?? []).find((a) => a.name === assoc.through);
+      if (throughAssoc?.target_model && throughAssoc.foreign_key) {
+        return { paramKey: throughAssoc.target_model.toLowerCase(), foreignKey: throughAssoc.foreign_key };
+      }
+      return null;
+    }
+    if (assoc.type === "has_many" && assoc.foreign_key && assoc.target_model) {
+      return { paramKey: assoc.target_model.toLowerCase(), foreignKey: assoc.foreign_key };
+    }
+    return null;
+  }
+
+  function getColumnLabel(col: ColumnDef): string {
+    if (col.foreign_key && fkMap.has(col.name)) {
+      return fkMap.get(col.name)!;
+    }
+    return col.name;
+  }
 
   function buildParams(extra: Record<string, string> = {}): Record<string, string> {
     const params: Record<string, string> = { ...extra };
@@ -126,9 +168,17 @@ export function DataTable({
                   onClick={() => handleSort(col.name)}
                 >
                   <span className="inline-flex items-center gap-1">
-                    {col.name}
+                    {getColumnLabel(col)}
                     <SortIcon column={col.name} />
                   </span>
+                </th>
+              ))}
+              {(attachmentAttributes ?? []).map((att) => (
+                <th
+                  key={att.name}
+                  className="h-10 px-3 text-left font-medium text-muted-foreground"
+                >
+                  {att.name}
                 </th>
               ))}
               {hasManyAssocs.map((assoc) => (
@@ -162,22 +212,75 @@ export function DataTable({
                     />
                   </td>
                 )}
-                {visibleColumns.map((col) => (
-                  <td key={col.name} className="px-3 py-2.5">
-                    <CellValue
-                      value={record[col.name]}
-                      column={col}
-                      onFilter={onCellFilter}
-                    />
-                  </td>
-                ))}
-                {hasManyAssocs.map((assoc) => (
-                  <td key={assoc.name} className="px-3 py-2.5">
-                    <Badge variant="muted">
-                      {String(record[`_assoc_${assoc.name}`] ?? 0)}
-                    </Badge>
-                  </td>
-                ))}
+                {visibleColumns.map((col) => {
+                  // For foreign key columns, render as association link
+                  const assocName = col.foreign_key ? fkMap.get(col.name) : undefined;
+                  const belongsTo = assocName
+                    ? (record[`_belongs_to_${assocName}`] as BelongsToData | undefined)
+                    : undefined;
+
+                  if (belongsTo) {
+                    return (
+                      <td key={col.name} className="px-3 py-2.5">
+                        <Link
+                          href={`/new-admin/${belongsTo.param_key}/${belongsTo.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {belongsTo.display_name}
+                        </Link>
+                      </td>
+                    );
+                  }
+
+                  return (
+                    <td key={col.name} className="px-3 py-2.5">
+                      <CellValue
+                        value={record[col.name]}
+                        column={col}
+                        onFilter={onCellFilter}
+                      />
+                    </td>
+                  );
+                })}
+                {(attachmentAttributes ?? []).map((att) => {
+                  const info = record[`_attachment_${att.name}`] as AttachmentInfo | undefined;
+                  return (
+                    <td key={att.name} className="px-3 py-2.5">
+                      {info?.thumbnail_url ? (
+                        <img
+                          src={info.thumbnail_url}
+                          alt={info.filename}
+                          className="h-10 w-10 rounded object-cover"
+                        />
+                      ) : info ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <FileIcon className="h-3.5 w-3.5" />
+                          {info.filename}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic text-xs">none</span>
+                      )}
+                    </td>
+                  );
+                })}
+                {hasManyAssocs.map((assoc) => {
+                  const link = getAssocLink(assoc);
+                  const count = String(record[`_assoc_${assoc.name}`] ?? 0);
+                  return (
+                    <td key={assoc.name} className="px-3 py-2.5">
+                      {link ? (
+                        <Link
+                          href={`/new-admin/${link.paramKey}?f[0][c]=${link.foreignKey}&f[0][o]=eq&f[0][v]=${String(record.id)}`}
+                          className="hover:underline"
+                        >
+                          <Badge variant="muted">{count}</Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="muted">{count}</Badge>
+                      )}
+                    </td>
+                  );
+                })}
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-1">
                     <Link href={`/new-admin/${modelParamKey}/${record.id}`}>

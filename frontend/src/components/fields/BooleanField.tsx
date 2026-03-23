@@ -1,4 +1,11 @@
 import { FieldWrapper } from "./FieldWrapper";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface BooleanFieldProps {
   name: string;
@@ -13,45 +20,31 @@ interface BooleanFieldProps {
 }
 
 export function BooleanField({ name, label, value, onChange, error, required, disabled, nullable, htmlId }: BooleanFieldProps) {
+  const selectValue = value === true ? "true" : value === false ? "false" : "";
+
+  function handleChange(val: string | null) {
+    const v = val as string;
+    if (v === "true") onChange(true);
+    else if (v === "false") onChange(false);
+    else onChange(null);
+  }
+
   return (
     <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
-      <div className="flex items-center gap-4 pt-1">
-        <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="radio"
-            name={name}
-            checked={value === true}
-            onChange={() => onChange(true)}
-            disabled={disabled}
-            className="h-4 w-4 text-primary border-input focus:ring-ring"
-          />
-          Yes
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="radio"
-            name={name}
-            checked={value === false}
-            onChange={() => onChange(false)}
-            disabled={disabled}
-            className="h-4 w-4 text-primary border-input focus:ring-ring"
-          />
-          No
-        </label>
-        {nullable && (
-          <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="radio"
-              name={name}
-              checked={value === null}
-              onChange={() => onChange(null)}
-              disabled={disabled}
-              className="h-4 w-4 text-primary border-input focus:ring-ring"
-            />
-            <span className="text-muted-foreground">Not set</span>
-          </label>
-        )}
-      </div>
+      <Select
+        value={selectValue}
+        onValueChange={handleChange}
+        disabled={disabled}
+      >
+        <SelectTrigger className="w-full" aria-invalid={error && error.length > 0 ? true : undefined}>
+          <SelectValue placeholder="— Select —" />
+        </SelectTrigger>
+        <SelectContent>
+          {nullable && <SelectItem value="">Not set</SelectItem>}
+          <SelectItem value="true">Yes</SelectItem>
+          <SelectItem value="false">No</SelectItem>
+        </SelectContent>
+      </Select>
     </FieldWrapper>
   );
 }

@@ -3,7 +3,8 @@ import { Link, router } from "@inertiajs/react";
 import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { ModelMeta, RecordData, AssociationData, ColumnDef } from "@/types";
+import type { ModelMeta, RecordData, AssociationData, ColumnDef, AttachmentInfo } from "@/types";
+import { FileIcon } from "lucide-react";
 
 interface Props {
   model: ModelMeta;
@@ -16,6 +17,18 @@ function ResourceShow({ model, record, associations }: Props) {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
     router.delete(`/new-admin/${model.param_key}/${record.id}`);
   }
+
+  // Map foreign key column names to their belongs_to association
+  const fkToAssoc = new Map<string, AssociationData>();
+  associations.forEach((assoc) => {
+    if (assoc.type === "belongs_to" && assoc.record) {
+      // Find the matching FK column: association name + "_id" or use foreign_key from model associations
+      const assocDef = model.associations.find((a) => a.name === assoc.name);
+      if (assocDef?.foreign_key) {
+        fkToAssoc.set(assocDef.foreign_key, assoc);
+      }
+    }
+  });
 
   return (
     <div className="space-y-8">
@@ -45,22 +58,85 @@ function ResourceShow({ model, record, associations }: Props) {
       <div className="rounded-md border border-border overflow-hidden">
         <table className="w-full text-sm">
           <tbody>
-            {model.columns.map((col) => (
-              <tr
-                key={col.name}
-                className="border-b border-border last:border-0"
-              >
-                <td className="px-4 py-3 font-medium text-muted-foreground bg-muted/30 w-48 align-top">
-                  {col.name}
-                </td>
-                <td className="px-4 py-3">
-                  <FieldValue value={record[col.name]} column={col} />
-                </td>
-              </tr>
-            ))}
+            {model.columns.map((col) => {
+              // For FK columns, show the association link instead
+              const assocData = fkToAssoc.get(col.name);
+              return (
+                <tr
+                  key={col.name}
+                  className="border-b border-border last:border-0"
+                >
+                  <td className="px-4 py-3 font-medium text-muted-foreground bg-muted/30 w-48 align-top">
+                    {assocData
+                      ? model.associations.find((a) => a.name === assocData.name)?.name ?? col.name
+                      : col.name}
+                  </td>
+                  <td className="px-4 py-3">
+                    {assocData && assocData.record ? (
+                      <Link
+                        href={`/new-admin/${assocData.record.param_key}/${assocData.record.id}`}
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
+                        {assocData.record.display_name}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      <FieldValue value={record[col.name]} column={col} />
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {model.attachment_attributes.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">
+            Attachments
+          </h3>
+          <div className="rounded-md border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody>
+                {model.attachment_attributes.map((att) => {
+                  const info = record[`_attachment_${att.name}`] as AttachmentInfo | undefined;
+                  return (
+                    <tr key={att.name} className="border-b border-border last:border-0">
+                      <td className="px-4 py-3 font-medium text-muted-foreground bg-muted/30 w-48 align-top">
+                        {att.name}
+                      </td>
+                      <td className="px-4 py-3">
+                        {info?.url && info.content_type?.startsWith("image/") ? (
+                          <div className="space-y-2">
+                            <img
+                              src={info.url}
+                              alt={info.filename}
+                              className="max-h-64 rounded-md border border-border"
+                            />
+                            <p className="text-xs text-muted-foreground">{info.filename}</p>
+                          </div>
+                        ) : info ? (
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <FileIcon className="h-4 w-4 text-muted-foreground" />
+                            {info.url ? (
+                              <a href={info.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {info.filename}
+                              </a>
+                            ) : info.filename}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50 italic">none</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {associations.length > 0 && (
         <div className="space-y-4">
@@ -70,7 +146,9 @@ function ResourceShow({ model, record, associations }: Props) {
           <div className="rounded-md border border-border overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
-                {associations.map((assoc) => (
+                {associations
+                  .filter((a) => a.type !== "belongs_to")
+                  .map((assoc) => (
                   <tr
                     key={assoc.name}
                     className="border-b border-border last:border-0"
@@ -80,7 +158,7 @@ function ResourceShow({ model, record, associations }: Props) {
                       <div className="text-xs font-normal">{assoc.type}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <AssociationValue assoc={assoc} />
+                      <AssociationValue assoc={assoc} recordId={record.id} />
                     </td>
                   </tr>
                 ))}
@@ -133,7 +211,7 @@ function FieldValue({ value, column }: { value: unknown; column: ColumnDef }) {
   return <span>{String(value)}</span>;
 }
 
-function AssociationValue({ assoc }: { assoc: AssociationData }) {
+function AssociationValue({ assoc, recordId }: { assoc: AssociationData; recordId: number | string }) {
   if (assoc.type === "belongs_to" || assoc.type === "has_one") {
     if (!assoc.record) {
       return <span className="text-muted-foreground/50 italic">none</span>;
@@ -150,11 +228,22 @@ function AssociationValue({ assoc }: { assoc: AssociationData }) {
   }
 
   if (assoc.type === "has_many" || assoc.type === "has_many_through") {
-    return (
-      <Badge variant="muted">
-        {assoc.count ?? 0} {(assoc.count ?? 0) === 1 ? "record" : "records"}
-      </Badge>
-    );
+    const count = assoc.count ?? 0;
+    const label = `${count} ${count === 1 ? "record" : "records"}`;
+
+    // If we have param_key and foreign_key, make it a clickable link
+    if (assoc.param_key && assoc.foreign_key) {
+      return (
+        <Link
+          href={`/new-admin/${assoc.param_key}?f[0][c]=${assoc.foreign_key}&f[0][o]=eq&f[0][v]=${String(recordId)}`}
+          className="hover:underline"
+        >
+          <Badge variant="muted">{label}</Badge>
+        </Link>
+      );
+    }
+
+    return <Badge variant="muted">{label}</Badge>;
   }
 
   return <span className="text-muted-foreground/50">-</span>;

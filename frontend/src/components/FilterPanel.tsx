@@ -2,6 +2,18 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Plus, X, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import type { ColumnDef, FilterRule } from "@/types";
 import { FILTER_OPERATORS } from "@/types";
 
@@ -22,7 +34,6 @@ export function FilterPanel({ rules, columns, enums, onChange }: FilterPanelProp
   const [localRules, setLocalRules] = useState<FilterRule[]>(rules);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const isEditingRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -44,18 +55,6 @@ export function FilterPanel({ rules, columns, enums, onChange }: FilterPanelProp
   const filterableColumns = columns.filter(
     (col) => !col.primary_key && FILTERABLE_TYPES.has(col.type)
   );
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    if (dropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [dropdownOpen]);
 
   function getColumn(name: string): ColumnDef | undefined {
     return columns.find((c) => c.name === name);
@@ -132,7 +131,6 @@ export function FilterPanel({ rules, columns, enums, onChange }: FilterPanelProp
     const updated = localRules.filter((_, i) => i !== index);
     setLocalRules(updated);
     setEditingIndex(null);
-    // Don't set isEditingRef — we want full sync after removal
     const applicable = updated.filter((r) => isUnaryOp(r.column, r.operator) || r.value);
     onChange(applicable);
   }
@@ -177,19 +175,35 @@ export function FilterPanel({ rules, columns, enums, onChange }: FilterPanelProp
           );
         })}
 
-        <div className="relative" ref={dropdownRef}>
-          <Button
-            variant={hasRules ? "ghost" : "outline"}
-            size="sm"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            data-action="add-filter"
-            className={hasRules ? "h-7 px-2 text-xs text-muted-foreground" : ""}
+        <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <PopoverTrigger
+            render={
+              <Button
+                variant={hasRules ? "ghost" : "outline"}
+                size="sm"
+                data-action="add-filter"
+                className={hasRules ? "h-7 px-2 text-xs text-muted-foreground" : ""}
+              />
+            }
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
             {hasRules ? "Add" : "Add filter"}
-          </Button>
-          {dropdownOpen && <FilterDropdown columns={filterableColumns} onSelect={addFilter} />}
-        </div>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 p-1">
+            {filterableColumns.map((col) => (
+              <button
+                key={col.name}
+                type="button"
+                className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                data-filter-field={col.name}
+                onClick={() => addFilter(col)}
+              >
+                {col.name}
+                <span className="ml-1 text-xs text-muted-foreground">({col.type})</span>
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Expanded edit row for the selected filter */}
@@ -225,25 +239,6 @@ export function FilterPanel({ rules, columns, enums, onChange }: FilterPanelProp
   );
 }
 
-function FilterDropdown({ columns, onSelect }: { columns: ColumnDef[]; onSelect: (col: ColumnDef) => void }) {
-  return (
-    <div className="absolute z-50 mt-1 w-48 rounded-md border border-border bg-popover p-1 shadow-md">
-      {columns.map((col) => (
-        <button
-          key={col.name}
-          type="button"
-          className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-          data-filter-field={col.name}
-          onClick={() => onSelect(col)}
-        >
-          {col.name}
-          <span className="ml-1 text-xs text-muted-foreground">({col.type})</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function FilterRuleRow({
   rule, column, operators, enumValues, onUpdate, onRemove, onClose,
 }: {
@@ -259,15 +254,15 @@ function FilterRuleRow({
   const isUnary = currentOp?.unary ?? false;
   const isBetween = rule.operator === "between";
 
-  const inputClass = "h-7 rounded border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
-  const selectClass = `${inputClass} pr-6`;
+  const inputClass = "h-7 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
-  function handleOperatorChange(op: string) {
-    const newOp = operators.find((o) => o.key === op);
+  function handleOperatorChange(op: string | null) {
+    const key = op as string;
+    const newOp = operators.find((o) => o.key === key);
     onUpdate(
       newOp?.unary
-        ? { operator: op, value: "", value2: undefined }
-        : { operator: op },
+        ? { operator: key, value: "", value2: undefined }
+        : { operator: key },
       newOp?.unary ? "navigate" : "local"
     );
   }
@@ -277,17 +272,20 @@ function FilterRuleRow({
 
     if (column?.type === "enum" && enumValues.length > 0) {
       return (
-        <select
+        <Select
           value={rule.value}
-          onChange={(e) => onUpdate({ value: e.target.value }, "navigate")}
-          className={`${selectClass} w-36`}
-          name={`f[${rule.column}][v]`}
+          onValueChange={(val) => onUpdate({ value: val as string }, "navigate")}
         >
-          <option value="">— select —</option>
-          {enumValues.map((v) => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
+          <SelectTrigger size="sm" className="w-36">
+            <SelectValue placeholder="— select —" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">— select —</SelectItem>
+            {enumValues.map((v) => (
+              <SelectItem key={v} value={v}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       );
     }
 
@@ -299,7 +297,6 @@ function FilterRuleRow({
             value={rule.value}
             onChange={(e) => onUpdate({ value: e.target.value }, "navigate")}
             className={`${inputClass} w-36`}
-            name={`f[${rule.column}][v]`}
           />
           {isBetween && (
             <>
@@ -309,7 +306,6 @@ function FilterRuleRow({
                 value={rule.value2 ?? ""}
                 onChange={(e) => onUpdate({ value2: e.target.value }, "navigate")}
                 className={`${inputClass} w-36`}
-                name={`f[${rule.column}][v2]`}
               />
             </>
           )}
@@ -317,7 +313,6 @@ function FilterRuleRow({
       );
     }
 
-    // Text and number: debounced live apply
     if (column?.type === "integer" || column?.type === "decimal" || column?.type === "float") {
       return (
         <>
@@ -328,7 +323,6 @@ function FilterRuleRow({
             onKeyDown={(e) => { if (e.key === "Enter") { if (rule.value) onUpdate({}, "navigate"); onClose?.(); } }}
             className={`${inputClass} w-28`}
             step={column.type === "integer" ? "1" : "0.01"}
-            name={`f[${rule.column}][v]`}
             autoFocus
           />
           {isBetween && (
@@ -341,7 +335,6 @@ function FilterRuleRow({
                 onKeyDown={(e) => { if (e.key === "Enter") { if (rule.value) onUpdate({}, "navigate"); onClose?.(); } }}
                 className={`${inputClass} w-28`}
                 step={column.type === "integer" ? "1" : "0.01"}
-                name={`f[${rule.column}][v2]`}
               />
             </>
           )}
@@ -358,7 +351,6 @@ function FilterRuleRow({
         onKeyDown={(e) => { if (e.key === "Enter") { if (rule.value) onUpdate({}, "navigate"); onClose?.(); } }}
         placeholder="value..."
         className={`${inputClass} w-40`}
-        name={`f[${rule.column}][v]`}
         autoFocus
       />
     );
@@ -368,16 +360,19 @@ function FilterRuleRow({
     <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-1.5">
       <span className="text-sm font-medium min-w-[80px]">{rule.column}</span>
 
-      <select
+      <Select
         value={rule.operator}
-        onChange={(e) => handleOperatorChange(e.target.value)}
-        className={`${selectClass} w-auto`}
-        name={`f[${rule.column}][o]`}
+        onValueChange={handleOperatorChange}
       >
-        {operators.map((op) => (
-          <option key={op.key} value={op.key}>{op.label}</option>
-        ))}
-      </select>
+        <SelectTrigger size="sm" className="w-auto">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {operators.map((op) => (
+            <SelectItem key={op.key} value={op.key}>{op.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {renderValueInput()}
 

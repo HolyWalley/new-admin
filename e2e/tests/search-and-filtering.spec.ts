@@ -25,10 +25,10 @@ test.describe("Search & Filtering", () => {
     await page.locator('[data-action="add-filter"]').click();
     await page.locator('[data-filter-field="status"]').click();
 
-    // Select operator "is" and value "draft"
-    const filterRow = page.locator('[name="f[status][o]"]').first().locator("..");
-    // The operator should default to "is" for enum
-    await page.locator('select[name="f[status][v]"]').selectOption("draft");
+    // The shadcn Select for enum value — click the trigger to open, then select "draft"
+    const enumTrigger = page.locator('[data-slot="select-trigger"]').last();
+    await enumTrigger.click();
+    await page.locator('[data-slot="select-item"]').filter({ hasText: "draft" }).click();
 
     // Wait for filtered results
     await page.waitForURL(/f/);

@@ -1,4 +1,16 @@
 {
+  "node_modules/@fontsource-variable/geist/files/geist-cyrillic-wght-normal.woff2": {
+    "file": "new_admin2.woff2",
+    "src": "node_modules/@fontsource-variable/geist/files/geist-cyrillic-wght-normal.woff2"
+  },
+  "node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2": {
+    "file": "new_admin.woff2",
+    "src": "node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2"
+  },
+  "node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2": {
+    "file": "new_admin3.woff2",
+    "src": "node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2"
+  },
   "src/main.tsx": {
     "file": "new_admin.js",
     "name": "main",
@@ -6,6 +18,11 @@
     "isEntry": true,
     "css": [
       "new_admin.css"
+    ],
+    "assets": [
+      "new_admin2.woff2",
+      "new_admin.woff2",
+      "new_admin3.woff2"
     ]
   }
 }

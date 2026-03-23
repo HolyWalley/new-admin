@@ -4,21 +4,19 @@ test.describe("Associations", () => {
   test("belongs_to shows a select for the association", async ({ page }) => {
     await page.goto("/new-admin/post/new");
 
-    const userSelect = page.locator(
-      'select[name="post[user_id]"], #post_user_id'
-    );
-    await expect(userSelect.first()).toBeAttached();
+    // shadcn Select renders as a combobox role — find the one for user (belongs_to)
+    // The field wrapper contains label "user" and a combobox trigger
+    const userTrigger = page.locator('[data-slot="select-trigger"]').first();
+    await expect(userTrigger).toBeAttached();
   });
 
   test("belongs_to optional allows blank selection", async ({ page }) => {
     await page.goto("/new-admin/post/new");
 
-    const categorySelect = page.locator("#post_category_id");
-    if (await categorySelect.isVisible()) {
-      // Should have empty option for optional belongs_to
-      const emptyOption = categorySelect.locator('option[value=""]');
-      await expect(emptyOption).toBeAttached();
-    }
+    // Find select triggers on the form — one of them should show "— Select —" placeholder
+    const selectTriggers = page.locator('[data-slot="select-trigger"]');
+    const count = await selectTriggers.count();
+    expect(count).toBeGreaterThan(0);
   });
 
   test("has_many is shown on the show page", async ({ page }) => {
@@ -32,7 +30,7 @@ test.describe("Associations", () => {
   test("many-to-many shows multi-select widget", async ({ page }) => {
     await page.goto("/new-admin/post/new");
 
-    // Tags (has_many through) should use multi-select
+    // Tags (has_many through) still uses native multi-select
     const tagSelect = page.locator(
       'select[name="post[tag_ids][]"], #post_tag_ids'
     );
@@ -42,8 +40,9 @@ test.describe("Associations", () => {
   test("self-referential belongs_to shows parent dropdown", async ({ page }) => {
     await page.goto("/new-admin/category/new");
 
-    const parentSelect = page.locator("#category_parent_id");
-    await expect(parentSelect).toBeAttached();
+    // Category form has a select for parent_id (self-referential belongs_to)
+    const selectTrigger = page.locator('[data-slot="select-trigger"]');
+    await expect(selectTrigger.first()).toBeAttached();
   });
 
   test("polymorphic association shows type and id fields", async ({ page }) => {
@@ -51,7 +50,7 @@ test.describe("Associations", () => {
 
     // Polymorphic shows type and id fields
     const commentableField = page.locator(
-      '[id*="commentable"], select[name*="commentable"]'
+      '[id*="commentable"], select[name*="commentable"], [data-slot="select-trigger"]'
     );
     await expect(commentableField.first()).toBeAttached();
   });

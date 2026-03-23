@@ -15,21 +15,31 @@ interface FileUploadFieldProps {
 
 export function FileUploadField({ name, label, htmlId, onChange, error, existingAttachment, onRemove, removeFlag }: FileUploadFieldProps) {
   const hasError = error && error.length > 0;
+  const isImage = existingAttachment?.content_type?.startsWith("image/");
 
   return (
     <FieldWrapper name={name} label={label} error={error} htmlId={htmlId}>
       {existingAttachment && !removeFlag && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-          <span>Current: {existingAttachment.filename}</span>
-          {onRemove && (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="text-destructive hover:underline text-xs"
-            >
-              Remove
-            </button>
-          )}
+        <div className="mb-2 space-y-2">
+          {isImage && existingAttachment.url ? (
+            <img
+              src={existingAttachment.thumbnail_url ?? existingAttachment.url}
+              alt={existingAttachment.filename}
+              className="h-24 w-24 rounded-md border border-border object-cover"
+            />
+          ) : null}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{existingAttachment.filename}</span>
+            {onRemove && (
+              <button
+                type="button"
+                onClick={onRemove}
+                className="text-destructive hover:underline text-xs"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
       )}
       <input

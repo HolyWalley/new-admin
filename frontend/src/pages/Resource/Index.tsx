@@ -93,6 +93,7 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
         sort={sort}
         modelParamKey={model.param_key}
         associations={model.associations}
+        attachmentAttributes={model.attachment_attributes}
         bulkSelectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}

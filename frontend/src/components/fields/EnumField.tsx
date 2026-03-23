@@ -1,5 +1,11 @@
 import { FieldWrapper } from "./FieldWrapper";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface EnumFieldProps {
   name: string;
@@ -15,27 +21,25 @@ interface EnumFieldProps {
 }
 
 export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable, htmlId }: EnumFieldProps) {
-  const hasError = error && error.length > 0;
   return (
     <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
-      <select
-        id={htmlId ?? name}
-        name={name}
+      <Select
         value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
+        onValueChange={(val) => onChange(val as string)}
         disabled={disabled}
-        className={cn(
-          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-          hasError && "border-destructive focus-visible:ring-destructive"
-        )}
       >
-        {nullable && <option value="">— Select —</option>}
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={htmlId ?? name} className="w-full" aria-invalid={error && error.length > 0 ? true : undefined}>
+          <SelectValue placeholder="— Select —" />
+        </SelectTrigger>
+        <SelectContent>
+          {nullable && <SelectItem value="">— Select —</SelectItem>}
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </FieldWrapper>
   );
 }

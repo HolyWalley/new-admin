@@ -1,16 +1,23 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { PanelLeft, Menu } from "lucide-react";
 
 /* ---------- Context ---------- */
 
 interface SidebarContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
 }
 
 const SidebarContext = React.createContext<SidebarContextValue>({
   open: true,
   setOpen: () => {},
+  mobileOpen: false,
+  setMobileOpen: () => {},
 });
 
 export function useSidebar() {
@@ -19,6 +26,8 @@ export function useSidebar() {
 
 /* ---------- Provider ---------- */
 
+const STORAGE_KEY = "new-admin-sidebar";
+
 export function SidebarProvider({
   children,
   defaultOpen = true,
@@ -26,10 +35,32 @@ export function SidebarProvider({
   children: React.ReactNode;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = React.useState(defaultOpen);
+  const [open, setOpenState] = React.useState(() => {
+    if (typeof window === "undefined") return defaultOpen;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored !== null ? stored === "true" : defaultOpen;
+  });
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const setOpen = React.useCallback((value: boolean) => {
+    setOpenState(value);
+    localStorage.setItem(STORAGE_KEY, String(value));
+  }, []);
+
+  // Keyboard shortcut: Cmd+B / Ctrl+B to toggle
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        setOpen(!open);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, setOpen]);
 
   return (
-    <SidebarContext.Provider value={{ open, setOpen }}>
+    <SidebarContext.Provider value={{ open, setOpen, mobileOpen, setMobileOpen }}>
       <div className="flex min-h-svh w-full bg-background">{children}</div>
     </SidebarContext.Provider>
   );
@@ -44,15 +75,60 @@ export function Sidebar({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { open, mobileOpen, setMobileOpen } = useSidebar();
+
   return (
-    <aside
-      className={cn(
-        "hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground",
-        className
-      )}
-    >
-      {children}
-    </aside>
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          "hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-in-out overflow-hidden",
+          open ? "w-64" : "w-12",
+          className
+        )}
+      >
+        {children}
+      </aside>
+
+      {/* Mobile sidebar via Sheet */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" showCloseButton={false} className="w-64 p-0 bg-sidebar text-sidebar-foreground">
+          {children}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+/* ---------- Sidebar trigger (toggle button) ---------- */
+
+export function SidebarTrigger({ className }: { className?: string }) {
+  const { open, setOpen, setMobileOpen } = useSidebar();
+
+  return (
+    <>
+      {/* Desktop toggle */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setOpen(!open)}
+        className={cn("hidden md:inline-flex", className)}
+        title={open ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
+      >
+        <PanelLeft className="h-4 w-4" />
+      </Button>
+
+      {/* Mobile hamburger */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setMobileOpen(true)}
+        className={cn("md:hidden", className)}
+        title="Open menu"
+      >
+        <Menu className="h-4 w-4" />
+      </Button>
+    </>
   );
 }
 
@@ -65,10 +141,12 @@ export function SidebarHeader({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { open } = useSidebar();
   return (
     <div
       className={cn(
-        "flex h-14 items-center gap-2 border-b border-sidebar-border px-4",
+        "flex h-14 items-center gap-2 border-b border-sidebar-border px-4 shrink-0",
+        !open && "justify-center px-2",
         className
       )}
     >
@@ -101,7 +179,7 @@ export function SidebarFooter({
   return (
     <div
       className={cn(
-        "border-t border-sidebar-border px-3 py-3",
+        "border-t border-sidebar-border px-3 py-3 shrink-0",
         className
       )}
     >
@@ -129,6 +207,8 @@ export function SidebarGroupLabel({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { open } = useSidebar();
+  if (!open) return null;
   return (
     <div
       className={cn(
