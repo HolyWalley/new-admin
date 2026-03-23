@@ -12,8 +12,20 @@ import {
   SelectField,
   MultiSelectField,
   PolymorphicField,
+  FileUploadField,
+  RichTextField,
+  NestedFormSection,
 } from "@/components/fields";
-import type { ModelMeta, ColumnDef, AssociationOptions, HasManyThroughOptions, PolymorphicOptions } from "@/types";
+import type {
+  ModelMeta,
+  ColumnDef,
+  AssociationOptions,
+  HasManyThroughOptions,
+  PolymorphicOptions,
+  NestedFormConfigItem,
+  NestedFormData,
+  AttachmentInfo,
+} from "@/types";
 
 interface ResourceFormProps {
   model: ModelMeta;
@@ -21,6 +33,8 @@ interface ResourceFormProps {
   associationOptions: AssociationOptions;
   hasManyThroughOptions?: HasManyThroughOptions;
   polymorphicOptions?: PolymorphicOptions;
+  nestedFormConfig?: NestedFormConfigItem[];
+  nestedFormData?: NestedFormData;
   errors: Record<string, string[]>;
   action: "create" | "update";
 }
@@ -34,7 +48,19 @@ const EXCLUDED_COLUMNS = new Set([
   "remember_created_at",
 ]);
 
-export function ResourceForm({ model, record, associationOptions, hasManyThroughOptions, polymorphicOptions, errors, action }: ResourceFormProps) {
+type NestedRecord = Record<string, unknown> & { id?: number; _destroy?: boolean };
+
+export function ResourceForm({
+  model,
+  record,
+  associationOptions,
+  hasManyThroughOptions,
+  polymorphicOptions,
+  nestedFormConfig,
+  nestedFormData,
+  errors,
+  action,
+}: ResourceFormProps) {
   // Identify polymorphic associations and their column names to skip
   const polymorphicAssocs = model.associations.filter((a) => a.type === "belongs_to" && a.polymorphic);
   const polymorphicColumns = new Set<string>();
@@ -68,12 +94,110 @@ export function ResourceForm({ model, record, associationOptions, hasManyThrough
       initialValues[opt.ids_field] = (record[opt.ids_field] as unknown[]) ?? [];
     });
   }
+  // Rich text attributes
+  model.rich_text_attributes.forEach((attr) => {
+    initialValues[attr] = (record[attr] as string) ?? "";
+  });
 
   const [data, setData] = useState(initialValues);
   const [processing, setProcessing] = useState(false);
 
+  // File upload state (separate because File objects can't go in JSON)
+  const [files, setFiles] = useState<Record<string, File | null>>({});
+  const [removeAttachments, setRemoveAttachments] = useState<Set<string>>(new Set());
+
+  // Nested form state
+  const initialNested: Record<string, NestedRecord[]> = {};
+  if (nestedFormConfig && nestedFormData) {
+    nestedFormConfig.forEach((cfg) => {
+      const raw = nestedFormData[cfg.association_name];
+      if (cfg.type === "has_one") {
+        initialNested[cfg.association_name] = raw ? [raw as NestedRecord] : [];
+      } else {
+        initialNested[cfg.association_name] = (raw as NestedRecord[]) ?? [];
+      }
+    });
+  }
+  const [nestedData, setNestedData] = useState(initialNested);
+
   function setValue(name: string, value: unknown) {
     setData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function setFile(name: string, file: File | null) {
+    setFiles((prev) => ({ ...prev, [name]: file }));
+  }
+
+  function toggleRemoveAttachment(name: string) {
+    setRemoveAttachments((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }
+
+  function setNestedRecords(assocName: string, records: NestedRecord[]) {
+    setNestedData((prev) => ({ ...prev, [assocName]: records }));
+  }
+
+  function hasFiles(): boolean {
+    return Object.values(files).some((f) => f != null);
+  }
+
+  function buildPayload(): Record<string, unknown> | FormData {
+    const modelData: Record<string, unknown> = { ...data };
+
+    // Add nested attributes
+    if (nestedFormConfig) {
+      nestedFormConfig.forEach((cfg) => {
+        const records = nestedData[cfg.association_name] ?? [];
+        const attrKey = `${cfg.association_name}_attributes`;
+        if (cfg.type === "has_one") {
+          modelData[attrKey] = records[0] ?? {};
+        } else {
+          // Convert array to indexed hash for Rails
+          const indexed: Record<string, unknown> = {};
+          records.forEach((rec, i) => {
+            indexed[String(i)] = rec;
+          });
+          modelData[attrKey] = indexed;
+        }
+      });
+    }
+
+    // If we have files, use FormData
+    if (hasFiles()) {
+      const formData = new FormData();
+      const prefix = model.param_key;
+
+      // Flatten data into FormData
+      Object.entries(modelData).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(`${prefix}[${key}][]`, String(v)));
+        } else if (typeof value === "object" && !(value instanceof File)) {
+          // Nested attributes
+          flattenToFormData(formData, `${prefix}[${key}]`, value as Record<string, unknown>);
+        } else {
+          formData.append(`${prefix}[${key}]`, String(value));
+        }
+      });
+
+      // Add files
+      Object.entries(files).forEach(([name, file]) => {
+        if (file) {
+          formData.append(`${prefix}[${name}]`, file);
+        }
+      });
+
+      return formData;
+    }
+
+    return { [model.param_key]: modelData };
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -85,16 +209,24 @@ export function ResourceForm({ model, record, associationOptions, hasManyThrough
         ? `/new-admin/${model.param_key}`
         : `/new-admin/${model.param_key}/${record.id}`;
 
-    const payload = { [model.param_key]: data } as Record<string, unknown>;
+    const payload = buildPayload();
 
     if (action === "create") {
       router.post(url, payload as never, {
         onFinish: () => setProcessing(false),
       });
     } else {
-      router.patch(url, payload as never, {
-        onFinish: () => setProcessing(false),
-      });
+      // For file uploads with PATCH, Inertia uses _method spoofing
+      if (payload instanceof FormData) {
+        payload.append("_method", "patch");
+        router.post(url, payload as never, {
+          onFinish: () => setProcessing(false),
+        });
+      } else {
+        router.patch(url, payload as never, {
+          onFinish: () => setProcessing(false),
+        });
+      }
     }
   }
 
@@ -294,6 +426,49 @@ export function ResourceForm({ model, record, associationOptions, hasManyThrough
         />
       ))}
 
+      {/* ActiveStorage file upload fields */}
+      {model.attachment_attributes.map((att) => {
+        const attachmentKey = `_attachment_${att.name}`;
+        const existing = record[attachmentKey] as AttachmentInfo | undefined;
+        return (
+          <FileUploadField
+            key={att.name}
+            name={att.name}
+            label={att.name}
+            htmlId={htmlId(att.name)}
+            onChange={(file) => setFile(att.name, file)}
+            error={getError(att.name)}
+            existingAttachment={existing ?? null}
+            onRemove={() => toggleRemoveAttachment(att.name)}
+            removeFlag={removeAttachments.has(att.name)}
+          />
+        );
+      })}
+
+      {/* ActionText rich text fields */}
+      {model.rich_text_attributes.map((attr) => (
+        <RichTextField
+          key={attr}
+          name={attr}
+          label={attr}
+          htmlId={htmlId(attr)}
+          value={data[attr] as string | null}
+          onChange={(v) => setValue(attr, v)}
+          error={getError(attr)}
+        />
+      ))}
+
+      {/* Nested form sections */}
+      {nestedFormConfig?.map((cfg) => (
+        <NestedFormSection
+          key={cfg.association_name}
+          config={cfg}
+          records={nestedData[cfg.association_name] ?? []}
+          onChange={(records) => setNestedRecords(cfg.association_name, records)}
+          parentParamKey={model.param_key}
+        />
+      ))}
+
       <div className="flex items-center gap-3 pt-4">
         <Button type="submit" disabled={processing}>
           {processing ? "Saving..." : action === "create" ? "Create" : "Update"}
@@ -309,4 +484,18 @@ export function ResourceForm({ model, record, associationOptions, hasManyThrough
       </div>
     </form>
   );
+}
+
+function flattenToFormData(formData: FormData, prefix: string, obj: Record<string, unknown>) {
+  Object.entries(obj).forEach(([key, value]) => {
+    const fullKey = `${prefix}[${key}]`;
+    if (value === null || value === undefined) return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => formData.append(`${fullKey}[]`, String(v)));
+    } else if (typeof value === "object" && !(value instanceof File)) {
+      flattenToFormData(formData, fullKey, value as Record<string, unknown>);
+    } else {
+      formData.append(fullKey, String(value));
+    }
+  });
 }

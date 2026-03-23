@@ -55,6 +55,8 @@ module NewAdmin
         association_options: association_options_for_form,
         has_many_through_options: has_many_through_options_for_form,
         polymorphic_options: polymorphic_options_for_form,
+        nested_form_config: nested_form_config,
+        nested_form_data: {},
         errors: {},
       }
     end
@@ -72,6 +74,8 @@ module NewAdmin
           association_options: association_options_for_form,
           has_many_through_options: has_many_through_options_for_form,
           polymorphic_options: polymorphic_options_for_form,
+          nested_form_config: nested_form_config,
+          nested_form_data: {},
           errors: record.errors.to_hash(true),
         }
       end
@@ -84,6 +88,8 @@ module NewAdmin
         association_options: association_options_for_form,
         has_many_through_options: has_many_through_options_for_form,
         polymorphic_options: polymorphic_options_for_form,
+        nested_form_config: nested_form_config,
+        nested_form_data: nested_form_data_for(@record),
         errors: {},
       }
     end
@@ -99,6 +105,8 @@ module NewAdmin
           association_options: association_options_for_form,
           has_many_through_options: has_many_through_options_for_form,
           polymorphic_options: polymorphic_options_for_form,
+          nested_form_config: nested_form_config,
+          nested_form_data: nested_form_data_for(@record),
           errors: @record.errors.to_hash(true),
         }
       end
@@ -155,12 +163,36 @@ module NewAdmin
 
     def permitted_params
       allowed = editable_columns.map { |c| c.name.to_sym }
+
       # Allow has_many :through ID arrays (e.g., tag_ids: [])
       array_params = {}
       through_associations.each do |assoc|
         ids_field = "#{assoc.name.singularize}_ids"
         array_params[ids_field.to_sym] = []
       end
+
+      # Allow ActiveStorage attachment params
+      @model_config.attachment_attributes.each do |att|
+        allowed << att[:name].to_sym
+      end
+
+      # Allow ActionText rich text params
+      @model_config.rich_text_attributes.each do |attr_name|
+        allowed << attr_name.to_sym
+      end
+
+      # Allow nested attributes
+      nested_associations.each do |assoc|
+        target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+        next unless target_config
+
+        nested_fields = target_config.columns
+          .reject { |c| c.primary_key? || c.name.in?(%w[created_at updated_at]) }
+          .map { |c| c.name.to_sym }
+        nested_fields << :id << :_destroy
+        array_params["#{assoc.name}_attributes".to_sym] = nested_fields
+      end
+
       params.require(@model_config.param_key.to_sym).permit(*allowed, **array_params)
     end
 
@@ -202,6 +234,22 @@ module NewAdmin
         ids_method = "#{assoc.name.singularize}_ids"
         row[ids_method] = record.send(ids_method) if record.respond_to?(ids_method)
       end
+      # Include attachment metadata
+      @model_config.attachment_attributes.each do |att|
+        attachment = record.send(att[:name])
+        if attachment.attached?
+          row["_attachment_#{att[:name]}"] = {
+            filename: attachment.filename.to_s,
+            content_type: attachment.content_type,
+            byte_size: attachment.byte_size,
+          }
+        end
+      end
+      # Include rich text content
+      @model_config.rich_text_attributes.each do |attr_name|
+        rich_text = record.send(attr_name)
+        row[attr_name] = rich_text&.to_plain_text.to_s
+      end
       row
     end
 
@@ -220,6 +268,9 @@ module NewAdmin
       end
       through_associations.each do |assoc|
         row["#{assoc.name.singularize}_ids"] = []
+      end
+      @model_config.rich_text_attributes.each do |attr_name|
+        row[attr_name] = ""
       end
       row
     end
@@ -240,6 +291,72 @@ module NewAdmin
 
     def through_associations
       @through_associations ||= @model_config.associations.select(&:through?)
+    end
+
+    def nested_associations
+      @nested_associations ||= @model_config.associations.select(&:nested_attributes?)
+    end
+
+    def nested_form_config
+      nested_associations.map do |assoc|
+        target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+        next unless target_config
+
+        nested_opts = @model_config.model.nested_attributes_options[assoc.name.to_sym] || {}
+        target_columns = target_config.columns
+          .reject { |c| c.primary_key? || c.name.in?(%w[created_at updated_at]) }
+
+        # Build association options for foreign keys within nested model
+        nested_assoc_options = {}
+        target_config.associations
+          .select { |a| a.macro == :belongs_to && !a.polymorphic? }
+          .each do |nested_assoc|
+            # Skip the back-reference to the parent
+            next if nested_assoc.target_model_name == @model_config.name
+
+            ref_config = NewAdmin::Introspector.models.find { |m| m.name == nested_assoc.target_model_name }
+            next unless ref_config
+
+            records = ref_config.model.limit(200).map do |r|
+              { id: r.id, label: r.send(ref_config.to_s_method).to_s }
+            end
+            nested_assoc_options[nested_assoc.foreign_key] = records
+          end
+
+        {
+          association_name: assoc.name,
+          type: assoc.macro == :has_one ? "has_one" : "has_many",
+          allow_destroy: nested_opts[:allow_destroy] || false,
+          target_param_key: target_config.param_key,
+          target_columns: target_columns.map(&:to_h),
+          association_options: nested_assoc_options,
+        }
+      end.compact
+    end
+
+    def nested_form_data_for(record)
+      nested_associations.each_with_object({}) do |assoc, hash|
+        target_config = NewAdmin::Introspector.models.find { |m| m.name == assoc.target_model_name }
+        next unless target_config
+
+        related = record.send(assoc.name)
+        target_columns = target_config.columns
+          .reject { |c| c.primary_key? || c.name.in?(%w[created_at updated_at]) }
+
+        if assoc.macro == :has_one
+          if related
+            row = { id: related.id }
+            target_columns.each { |col| row[col.name] = related.read_attribute(col.name) }
+            hash[assoc.name] = row
+          end
+        else
+          hash[assoc.name] = related.map do |r|
+            row = { id: r.id }
+            target_columns.each { |col| row[col.name] = r.read_attribute(col.name) }
+            row
+          end
+        end
+      end
     end
 
     def has_many_through_options_for_form

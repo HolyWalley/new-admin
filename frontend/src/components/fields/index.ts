@@ -9,3 +9,6 @@ export { EnumField } from "./EnumField";
 export { SelectField } from "./SelectField";
 export { MultiSelectField } from "./MultiSelectField";
 export { PolymorphicField } from "./PolymorphicField";
+export { FileUploadField } from "./FileUploadField";
+export { RichTextField } from "./RichTextField";
+export { NestedFormSection } from "./NestedFormSection";

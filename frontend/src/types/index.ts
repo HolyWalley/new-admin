@@ -99,6 +99,23 @@ export interface PolymorphicTarget {
 
 export type PolymorphicOptions = Record<string, PolymorphicTarget[]>;
 
+export interface AttachmentInfo {
+  filename: string;
+  content_type?: string;
+  byte_size?: number;
+}
+
+export interface NestedFormConfigItem {
+  association_name: string;
+  type: "has_many" | "has_one";
+  allow_destroy: boolean;
+  target_param_key: string;
+  target_columns: ColumnDef[];
+  association_options: Record<string, Array<{ id: number; label: string }>>;
+}
+
+export type NestedFormData = Record<string, Record<string, unknown> | Record<string, unknown>[]>;
+
 export interface Flash {
   success?: string;
   error?: string;
