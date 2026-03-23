@@ -37,6 +37,7 @@ interface ResourceFormProps {
   nestedFormData?: NestedFormData;
   errors: Record<string, string[]>;
   action: "create" | "update";
+  viewColumns?: ColumnDef[];
 }
 
 const EXCLUDED_COLUMNS = new Set([
@@ -60,6 +61,7 @@ export function ResourceForm({
   nestedFormData,
   errors,
   action,
+  viewColumns,
 }: ResourceFormProps) {
   // Identify polymorphic associations and their column names to skip
   const polymorphicAssocs = model.associations.filter((a) => a.type === "belongs_to" && a.polymorphic);
@@ -69,9 +71,10 @@ export function ResourceForm({
     polymorphicColumns.add(`${a.name}_id`);
   });
 
-  const editableColumns = model.columns.filter((col) => {
+  // Use DSL-provided view_columns when available, otherwise compute from model
+  const editableColumns = (viewColumns ?? model.columns).filter((col) => {
     if (col.primary_key) return false;
-    if (EXCLUDED_COLUMNS.has(col.name)) return false;
+    if (!viewColumns && EXCLUDED_COLUMNS.has(col.name)) return false;
     if (col.name === "type" && model.sti) return false;
     // Skip polymorphic type/id columns — rendered as PolymorphicField
     if (polymorphicColumns.has(col.name)) return false;
@@ -266,7 +269,7 @@ export function ResourceForm({
             <SelectField
               key={col.name}
               name={col.name}
-              label={assoc?.name ?? col.name}
+              label={col.label ?? assoc?.name ?? col.name}
               htmlId={fieldHtmlId}
               value={value as number | string | null}
               onChange={(v) => setValue(col.name, v)}
@@ -274,6 +277,7 @@ export function ResourceForm({
               error={error}
               required={required}
               excludeId={isSelfRef && action === "update" ? (record.id as number | string) : undefined}
+              help={col.help}
             />
           );
         }
@@ -284,7 +288,7 @@ export function ResourceForm({
             <EnumField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as string | null}
               onChange={(v) => setValue(col.name, v)}
@@ -292,6 +296,7 @@ export function ResourceForm({
               error={error}
               required={required}
               nullable={col.nullable}
+              help={col.help}
             />
           );
         }
@@ -302,13 +307,14 @@ export function ResourceForm({
             <BooleanField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as boolean | null}
               onChange={(v) => setValue(col.name, v)}
               error={error}
               required={required}
               nullable={col.nullable}
+              help={col.help}
             />
           );
         }
@@ -319,12 +325,13 @@ export function ResourceForm({
             <TextField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as string | null}
               onChange={(v) => setValue(col.name, v)}
               error={error}
               required={required}
+              help={col.help}
             />
           );
         }
@@ -335,12 +342,13 @@ export function ResourceForm({
             <DateTimeField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as string | null}
               onChange={(v) => setValue(col.name, v)}
               error={error}
               required={required}
+              help={col.help}
             />
           );
         }
@@ -351,12 +359,13 @@ export function ResourceForm({
             <DateField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as string | null}
               onChange={(v) => setValue(col.name, v)}
               error={error}
               required={required}
+              help={col.help}
             />
           );
         }
@@ -367,13 +376,14 @@ export function ResourceForm({
             <NumberField
               key={col.name}
               name={col.name}
-              label={col.name}
+              label={col.label ?? col.name}
               htmlId={fieldHtmlId}
               value={value as number | string | null}
               onChange={(v) => setValue(col.name, v)}
               error={error}
               required={required}
               step={col.type === "integer" ? "1" : "0.01"}
+              help={col.help}
             />
           );
         }
@@ -383,12 +393,13 @@ export function ResourceForm({
           <StringField
             key={col.name}
             name={col.name}
-            label={col.name}
+            label={col.label ?? col.name}
             htmlId={fieldHtmlId}
             value={value as string | null}
             onChange={(v) => setValue(col.name, v)}
             error={error}
             required={required}
+            help={col.help}
           />
         );
       })}

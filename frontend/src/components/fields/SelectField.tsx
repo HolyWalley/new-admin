@@ -24,15 +24,16 @@ interface SelectFieldProps {
   options: Option[];
   htmlId?: string;
   excludeId?: number | string;
+  help?: string;
 }
 
-export function SelectField({ name, label, value, onChange, error, required, disabled, options, htmlId, excludeId }: SelectFieldProps) {
+export function SelectField({ name, label, value, onChange, error, required, disabled, options, htmlId, excludeId, help }: SelectFieldProps) {
   const items = excludeId != null ? options.filter((opt) => opt.id !== excludeId) : options;
   const selectedOption = items.find((opt) => String(opt.id) === String(value)) ?? null;
   const hasError = error && error.length > 0;
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Combobox<Option>
         items={items}
         value={selectedOption}

@@ -19,9 +19,10 @@ interface DateFieldProps {
   required?: boolean;
   disabled?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function DateField({ name, label, value, onChange, error, required, disabled, htmlId }: DateFieldProps) {
+export function DateField({ name, label, value, onChange, error, required, disabled, htmlId, help }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   const hasError = error && error.length > 0;
 
@@ -41,7 +42,7 @@ export function DateField({ name, label, value, onChange, error, required, disab
   }
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={

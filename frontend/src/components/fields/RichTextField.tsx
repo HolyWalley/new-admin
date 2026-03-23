@@ -9,13 +9,14 @@ interface RichTextFieldProps {
   error?: string[];
   required?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function RichTextField({ name, label, value, onChange, error, required, htmlId }: RichTextFieldProps) {
+export function RichTextField({ name, label, value, onChange, error, required, htmlId, help }: RichTextFieldProps) {
   const hasError = error && error.length > 0;
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <textarea
         id={htmlId ?? name}
         name={name}

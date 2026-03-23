@@ -12,12 +12,13 @@ interface NumberFieldProps {
   disabled?: boolean;
   step?: string;
   htmlId?: string;
+  help?: string;
 }
 
-export function NumberField({ name, label, value, onChange, error, required, disabled, step = "1", htmlId }: NumberFieldProps) {
+export function NumberField({ name, label, value, onChange, error, required, disabled, step = "1", htmlId, help }: NumberFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Input
         id={htmlId ?? name}
         name={name}

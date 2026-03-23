@@ -2,7 +2,7 @@ import Layout from "@/layouts/Layout";
 import { Link } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { ResourceForm } from "@/components/ResourceForm";
-import type { ModelMeta, RecordData, AssociationOptions, HasManyThroughOptions, PolymorphicOptions, NestedFormConfigItem, NestedFormData } from "@/types";
+import type { ModelMeta, RecordData, AssociationOptions, HasManyThroughOptions, PolymorphicOptions, NestedFormConfigItem, NestedFormData, ColumnDef } from "@/types";
 
 interface Props {
   model: ModelMeta;
@@ -13,9 +13,10 @@ interface Props {
   nested_form_config?: NestedFormConfigItem[];
   nested_form_data?: NestedFormData;
   errors: Record<string, string[]>;
+  view_columns?: ColumnDef[];
 }
 
-function ResourceEdit({ model, record, association_options, has_many_through_options, polymorphic_options, nested_form_config, nested_form_data, errors }: Props) {
+function ResourceEdit({ model, record, association_options, has_many_through_options, polymorphic_options, nested_form_config, nested_form_data, errors, view_columns }: Props) {
   return (
     <div className="space-y-6">
       <div>
@@ -37,6 +38,7 @@ function ResourceEdit({ model, record, association_options, has_many_through_opt
         nestedFormData={nested_form_data}
         errors={errors}
         action="update"
+        viewColumns={view_columns}
       />
 
       <div>

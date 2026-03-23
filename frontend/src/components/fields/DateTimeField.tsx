@@ -19,9 +19,10 @@ interface DateTimeFieldProps {
   required?: boolean;
   disabled?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function DateTimeField({ name, label, value, onChange, error, required, disabled, htmlId }: DateTimeFieldProps) {
+export function DateTimeField({ name, label, value, onChange, error, required, disabled, htmlId, help }: DateTimeFieldProps) {
   const [open, setOpen] = useState(false);
   const hasError = error && error.length > 0;
 
@@ -73,7 +74,7 @@ export function DateTimeField({ name, label, value, onChange, error, required, d
   const timeInputClass = "h-7 w-14 rounded-md border border-input bg-transparent px-2 text-center text-sm tabular-nums outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={

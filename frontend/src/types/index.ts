@@ -19,6 +19,8 @@ export interface ColumnDef {
   limit?: number;
   enum_values?: string[];
   foreign_key?: boolean;
+  label?: string;
+  help?: string;
 }
 
 export interface AssociationDef {

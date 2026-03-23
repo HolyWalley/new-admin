@@ -8,7 +8,7 @@ import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterPanel } from "@/components/FilterPanel";
 import { BulkDeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
-import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule } from "@/types";
+import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule, ColumnDef } from "@/types";
 
 interface Props {
   model: ModelMeta;
@@ -17,9 +17,10 @@ interface Props {
   sort: SortState;
   search: string;
   filters: FilterRule[];
+  view_columns?: ColumnDef[];
 }
 
-function ResourceIndex({ model, records, pagination, sort, search, filters }: Props) {
+function ResourceIndex({ model, records, pagination, sort, search, filters, view_columns }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
@@ -86,7 +87,7 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
       />
 
       <DataTable
-        columns={model.columns}
+        columns={view_columns ?? model.columns}
         records={records}
         sort={sort}
         modelParamKey={model.param_key}

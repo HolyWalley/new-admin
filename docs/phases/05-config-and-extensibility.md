@@ -4,7 +4,7 @@
 
 Allow users to customize the admin panel via Ruby DSL and extend it with custom React components.
 
-## Status: NOT STARTED
+## Status: IN PROGRESS
 
 ## Depends on: Phase 4
 
@@ -14,7 +14,7 @@ Users can configure field visibility, labels, ordering, and register custom Reac
 
 ## Sub-phases
 
-### 5a — Ruby DSL & Field Configuration (NOT STARTED)
+### 5a — Ruby DSL & Field Configuration (DONE)
 
 The foundation that all other sub-phases build on.
 

@@ -6,10 +6,11 @@ interface FieldWrapperProps {
   error?: string[];
   required?: boolean;
   htmlId?: string;
+  help?: string;
   children: React.ReactNode;
 }
 
-export function FieldWrapper({ name, label, error, required, htmlId, children }: FieldWrapperProps) {
+export function FieldWrapper({ name, label, error, required, htmlId, help, children }: FieldWrapperProps) {
   const hasError = error && error.length > 0;
   return (
     <div className="space-y-1.5">
@@ -26,6 +27,9 @@ export function FieldWrapper({ name, label, error, required, htmlId, children }:
       {children}
       {hasError && (
         <p className="text-xs text-destructive">{error.join(", ")}</p>
+      )}
+      {help && !hasError && (
+        <p className="text-xs text-muted-foreground">{help}</p>
       )}
     </div>
   );

@@ -80,6 +80,7 @@ export function DataTable({
   }
 
   function getColumnLabel(col: ColumnDef): string {
+    if (col.label) return col.label;
     if (col.foreign_key && fkMap.has(col.name)) {
       return fkMap.get(col.name)!;
     }

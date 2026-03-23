@@ -19,13 +19,14 @@ interface EnumFieldProps {
   options: string[];
   nullable?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable, htmlId }: EnumFieldProps) {
+export function EnumField({ name, label, value, onChange, error, required, disabled, options, nullable, htmlId, help }: EnumFieldProps) {
   const hasError = error && error.length > 0;
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Combobox<string>
         items={options}
         value={value || null}

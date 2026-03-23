@@ -10,12 +10,13 @@ interface TextFieldProps {
   required?: boolean;
   disabled?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function TextField({ name, label, value, onChange, error, required, disabled, htmlId }: TextFieldProps) {
+export function TextField({ name, label, value, onChange, error, required, disabled, htmlId, help }: TextFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <textarea
         id={htmlId ?? name}
         name={name}

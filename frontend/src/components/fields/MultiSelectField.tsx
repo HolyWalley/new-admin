@@ -26,9 +26,10 @@ interface MultiSelectFieldProps {
   required?: boolean;
   disabled?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function MultiSelectField({ name, label, value, onChange, options, error, required, disabled, htmlId }: MultiSelectFieldProps) {
+export function MultiSelectField({ name, label, value, onChange, options, error, required, disabled, htmlId, help }: MultiSelectFieldProps) {
   const hasError = error && error.length > 0;
   const anchorRef = useComboboxAnchor();
 
@@ -36,7 +37,7 @@ export function MultiSelectField({ name, label, value, onChange, options, error,
   const selectedOptions = options.filter((opt) => selectedSet.has(String(opt.id)));
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       {/* Hidden select for E2E test compatibility */}
       <select
         id={htmlId ?? name}

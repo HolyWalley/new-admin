@@ -56,6 +56,7 @@ module NewAdmin
 
       render inertia: "Resource/Index", props: {
         model: model_metadata,
+        view_columns: resolved_columns_for(:list),
         records: serialize_records_for_list(records),
         pagination: {
           page: page,
@@ -72,6 +73,7 @@ module NewAdmin
     def show
       render inertia: "Resource/Show", props: {
         model: model_metadata,
+        view_columns: resolved_columns_for(:show),
         record: serialize_record_for_show(@record),
         associations: serialize_associations(@record),
       }
@@ -80,6 +82,7 @@ module NewAdmin
     def new
       render inertia: "Resource/New", props: {
         model: model_metadata,
+        view_columns: resolved_columns_for(:edit),
         record: default_values,
         association_options: association_options_for_form,
         has_many_through_options: has_many_through_options_for_form,
@@ -99,6 +102,7 @@ module NewAdmin
       else
         render inertia: "Resource/New", props: {
           model: model_metadata,
+          view_columns: resolved_columns_for(:edit),
           record: permitted_params.to_h,
           association_options: association_options_for_form,
           has_many_through_options: has_many_through_options_for_form,
@@ -113,6 +117,7 @@ module NewAdmin
     def edit
       render inertia: "Resource/Edit", props: {
         model: model_metadata,
+        view_columns: resolved_columns_for(:edit),
         record: serialize_record_for_form(@record),
         association_options: association_options_for_form,
         has_many_through_options: has_many_through_options_for_form,
@@ -130,6 +135,7 @@ module NewAdmin
       else
         render inertia: "Resource/Edit", props: {
           model: model_metadata,
+          view_columns: resolved_columns_for(:edit),
           record: serialize_record_for_form(@record),
           association_options: association_options_for_form,
           has_many_through_options: has_many_through_options_for_form,
@@ -645,6 +651,17 @@ module NewAdmin
 
         data
       end
+    end
+
+    def field_resolver
+      @field_resolver ||= begin
+        dsl_config = NewAdmin.configuration.model_config_for(@model_config.name)
+        FieldResolver.new(@model_config, dsl_config)
+      end
+    end
+
+    def resolved_columns_for(view_name)
+      field_resolver.columns_for(view_name)
     end
 
     # Use flash keys that work with redirect_to notice/alert

@@ -17,6 +17,7 @@ interface BooleanFieldProps {
   disabled?: boolean;
   nullable?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
 type BoolOption = { key: string; label: string };
@@ -25,13 +26,13 @@ const YES_OPTION: BoolOption = { key: "true", label: "Yes" };
 const NO_OPTION: BoolOption = { key: "false", label: "No" };
 const NOT_SET_OPTION: BoolOption = { key: "", label: "Not set" };
 
-export function BooleanField({ name, label, value, onChange, error, required, disabled, nullable, htmlId }: BooleanFieldProps) {
+export function BooleanField({ name, label, value, onChange, error, required, disabled, nullable, htmlId, help }: BooleanFieldProps) {
   const hasError = error && error.length > 0;
   const items = nullable ? [YES_OPTION, NO_OPTION, NOT_SET_OPTION] : [YES_OPTION, NO_OPTION];
   const selected = value === true ? YES_OPTION : value === false ? NO_OPTION : nullable ? NOT_SET_OPTION : null;
 
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Combobox<BoolOption>
         items={items}
         value={selected}

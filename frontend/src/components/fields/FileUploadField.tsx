@@ -11,14 +11,15 @@ interface FileUploadFieldProps {
   existingAttachment?: AttachmentInfo | null;
   onRemove?: () => void;
   removeFlag?: boolean;
+  help?: string;
 }
 
-export function FileUploadField({ name, label, htmlId, onChange, error, existingAttachment, onRemove, removeFlag }: FileUploadFieldProps) {
+export function FileUploadField({ name, label, htmlId, onChange, error, existingAttachment, onRemove, removeFlag, help }: FileUploadFieldProps) {
   const hasError = error && error.length > 0;
   const isImage = existingAttachment?.content_type?.startsWith("image/");
 
   return (
-    <FieldWrapper name={name} label={label} error={error} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} htmlId={htmlId} help={help}>
       {existingAttachment && !removeFlag && (
         <div className="mb-2 space-y-2">
           {isImage && existingAttachment.url ? (

@@ -12,9 +12,10 @@ interface Props {
   model: ModelMeta;
   record: RecordData;
   associations: AssociationData[];
+  view_columns?: ColumnDef[];
 }
 
-function ResourceShow({ model, record, associations }: Props) {
+function ResourceShow({ model, record, associations, view_columns }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Map foreign key column names to their belongs_to association
@@ -57,7 +58,7 @@ function ResourceShow({ model, record, associations }: Props) {
       <div className="rounded-md border border-border overflow-hidden">
         <table className="w-full text-sm">
           <tbody>
-            {model.columns.map((col) => {
+            {(view_columns ?? model.columns).map((col) => {
               // For FK columns, show the association link instead
               const assocData = fkToAssoc.get(col.name);
               return (
@@ -66,9 +67,11 @@ function ResourceShow({ model, record, associations }: Props) {
                   className="border-b border-border last:border-0"
                 >
                   <td className="px-4 py-3 font-medium text-muted-foreground bg-muted/30 w-48 align-top">
-                    {assocData
-                      ? model.associations.find((a) => a.name === assocData.name)?.name ?? col.name
-                      : col.name}
+                    {col.label
+                      ? col.label
+                      : assocData
+                        ? model.associations.find((a) => a.name === assocData.name)?.name ?? col.name
+                        : col.name}
                   </td>
                   <td className="px-4 py-3">
                     {assocData && assocData.record ? (

@@ -11,12 +11,13 @@ interface StringFieldProps {
   required?: boolean;
   disabled?: boolean;
   htmlId?: string;
+  help?: string;
 }
 
-export function StringField({ name, label, value, onChange, error, required, disabled, htmlId }: StringFieldProps) {
+export function StringField({ name, label, value, onChange, error, required, disabled, htmlId, help }: StringFieldProps) {
   const hasError = error && error.length > 0;
   return (
-    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId}>
+    <FieldWrapper name={name} label={label} error={error} required={required} htmlId={htmlId} help={help}>
       <Input
         id={htmlId ?? name}
         name={name}
