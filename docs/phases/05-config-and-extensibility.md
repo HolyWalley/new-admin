@@ -203,6 +203,9 @@ Final UX refinements. Depends on 5a.
 - `config.model "Order" do; navigation_label "Commerce"; end` — assign model to group
 - `config.model "Order" do; weight 10; end` — ordering within groups
 - `config.model "InternalThing" do; visible false; end` — hide from nav
+- `config.model "Order" do; icon "ShoppingCart"; end` — custom Lucide icon name for sidebar
+- Icons are auto-matched by model name semantics; configured icon overrides auto-match
+- Unmatched models without configured icon show a colored dot fallback
 
 **Audit trail:**
 - `config.audit_with :paper_trail` — adapter for tracking changes

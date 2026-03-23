@@ -27,14 +27,94 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   LayoutDashboard,
-  Database,
   ChevronRight,
   ChevronsUpDown,
   LogOut,
+  Users,
+  MapPin,
+  FolderTree,
+  MessageSquare,
+  ShoppingCart,
+  Package,
+  FileText,
+  PenLine,
+  Box,
+  Monitor,
+  Truck,
+  Tag,
+  Tags,
+  Notebook,
+  StickyNote,
+  Paperclip,
+  type LucideIcon,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { CommandPalette } from "@/components/CommandPalette";
 import type { SharedProps, ModelSummary } from "@/types";
+
+/* ───── Semantic icon per model (deterministic color from name) ───── */
+
+const MODEL_COLORS: [string, string][] = [
+  ["text-red-500", "bg-red-500"], ["text-orange-500", "bg-orange-500"],
+  ["text-amber-500", "bg-amber-500"], ["text-yellow-500", "bg-yellow-500"],
+  ["text-lime-500", "bg-lime-500"], ["text-green-500", "bg-green-500"],
+  ["text-emerald-500", "bg-emerald-500"], ["text-teal-500", "bg-teal-500"],
+  ["text-cyan-500", "bg-cyan-500"], ["text-sky-500", "bg-sky-500"],
+  ["text-blue-500", "bg-blue-500"], ["text-indigo-500", "bg-indigo-500"],
+  ["text-violet-500", "bg-violet-500"], ["text-purple-500", "bg-purple-500"],
+  ["text-fuchsia-500", "bg-fuchsia-500"], ["text-pink-500", "bg-pink-500"],
+  ["text-rose-500", "bg-rose-500"],
+];
+
+/** Pattern → icon mapping. First match wins. Patterns match against lowercase model name. */
+const ICON_PATTERNS: [RegExp, LucideIcon][] = [
+  [/user|account|member|person|people|admin|employee|staff|author/i, Users],
+  [/address|location|place|geo/i, MapPin],
+  [/category|categor|folder|group|section/i, FolderTree],
+  [/comment|review|feedback|reply|response/i, MessageSquare],
+  [/order_item|line_item|cart_item|basket_item/i, Package],
+  [/order|purchase|checkout|transaction|sale/i, ShoppingCart],
+  [/digital.?product|download|ebook|software/i, Monitor],
+  [/physical.?product|shipped|tangible/i, Truck],
+  [/product|item|good|merchandise|sku/i, Box],
+  [/page|document|wiki|article/i, FileText],
+  [/post|blog|entry|story|publication/i, PenLine],
+  [/tagging|categoriz/i, Tags],
+  [/tag|label|keyword/i, Tag],
+  [/note$/i, StickyNote],
+  [/notes$/i, Notebook],
+  [/attachment|file|upload|media|asset/i, Paperclip],
+];
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function getModelIcon(name: string): LucideIcon | null {
+  // Strip namespace for matching (e.g. "Notes::Attachment" → "Attachment")
+  const simpleName = name.includes("::") ? name.split("::").pop()! : name;
+  // Also try the full name for namespace-aware patterns
+  for (const [pattern, icon] of ICON_PATTERNS) {
+    if (pattern.test(simpleName) || pattern.test(name)) return icon;
+  }
+  return null; // no match — will show colored dot fallback
+}
+
+function ModelIcon({ name }: { name: string }) {
+  const [textColor, bgColor] = MODEL_COLORS[hashString(name) % MODEL_COLORS.length];
+  const Icon = getModelIcon(name);
+  if (Icon) return <Icon className={`h-4 w-4 shrink-0 ${textColor}`} />;
+  // Colored dot fallback — wrapped in icon-sized container for alignment
+  return (
+    <span className="h-4 w-4 shrink-0 flex items-center justify-center">
+      <span className={`h-2.5 w-2.5 rounded-full ${bgColor}`} />
+    </span>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { props, url } = usePage<SharedProps>();
@@ -200,7 +280,7 @@ function ModelNavigation({ models, currentModel }: { models: ModelSummary[]; cur
                 href={`/new-admin/${model.param_key}`}
                 isActive={currentModel === model.name}
               >
-                <Database className="h-4 w-4 shrink-0 opacity-40" />
+                <ModelIcon name={model.name} />
                 <SidebarLabel className="flex-1 truncate">{model.name}</SidebarLabel>
                 <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
                   {model.count}
@@ -235,7 +315,7 @@ function CollapsibleModelGroup({
           isActive={currentModel === parent.name}
           className="flex-1"
         >
-          <Database className="h-4 w-4 shrink-0 opacity-40" />
+          <ModelIcon name={parent.name} />
           <SidebarLabel className="flex-1 truncate">{parent.name}</SidebarLabel>
           <SidebarLabel className="text-[11px] tabular-nums text-sidebar-foreground/40">
             {parent.count}
@@ -292,7 +372,7 @@ function CollapsibleNamespaceGroup({
         onClick={() => setExpanded(!expanded)}
         className={sidebarMenuLinkClass(false)}
       >
-        <Database className="h-4 w-4 shrink-0 opacity-40" />
+        <ModelIcon name={label} />
         {sidebarOpen && (
           <>
             <span className="flex-1 truncate">{label}</span>
