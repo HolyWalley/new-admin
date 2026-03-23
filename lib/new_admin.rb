@@ -1,3 +1,4 @@
+require "inertia_rails"
 require "new_admin/version"
 require "new_admin/configuration"
 require "new_admin/model_configuration"
