@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { router } from "@inertiajs/react";
 import { Search, X } from "lucide-react";
-import type { SortState, FilterValues } from "@/types";
+import { serializeFilters } from "@/components/DataTable";
+import type { SortState, FilterRule } from "@/types";
 
 interface SearchBarProps {
   value: string;
   modelParamKey: string;
   sort: SortState;
-  filters: FilterValues;
+  filters: FilterRule[];
 }
 
 export function SearchBar({ value, modelParamKey, sort, filters }: SearchBarProps) {
@@ -29,11 +30,9 @@ export function SearchBar({ value, modelParamKey, sort, filters }: SearchBarProp
       direction: sort.direction,
     };
     if (q) params.q = q;
-    // Preserve filters
-    Object.entries(filters).forEach(([key, val]) => {
-      if (val) params[`f[${key}]`] = val;
-    });
-    // Reset to page 1 on search change
+    if (filters.length > 0) {
+      serializeFilters(params, filters);
+    }
     router.get(`/new-admin/${modelParamKey}`, params, {
       preserveState: true,
       preserveScroll: true,

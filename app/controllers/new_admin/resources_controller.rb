@@ -26,24 +26,20 @@ module NewAdmin
         end
       end
 
-      # Per-column filters
+      # Per-column filters (indexed array: f[0][c]=col, f[0][o]=op, f[0][v]=val, f[0][v2]=val2)
       if params[:f].is_a?(ActionController::Parameters)
-        params[:f].each do |key, value|
-          next if value.blank?
+        params[:f].values.each do |rule|
+          next unless rule.is_a?(ActionController::Parameters)
 
-          col_name = key.sub(/_from$|_to$/, "")
+          col_name = rule[:c].to_s
+          operator = rule[:o].to_s
+          value = rule[:v].to_s
+          value2 = rule[:v2].to_s
+
           col = @model_config.columns.find { |c| c.name == col_name }
           next unless col
 
-          if key.end_with?("_from")
-            scope = scope.where("#{table}.#{col_name} >= ?", value)
-          elsif key.end_with?("_to")
-            scope = scope.where("#{table}.#{col_name} <= ?", value)
-          elsif col.type == :boolean
-            scope = scope.where("#{table}.#{col_name}" => value == "true")
-          else
-            scope = scope.where("#{table}.#{col_name}" => value)
-          end
+          scope = apply_filter(scope, table, col_name, operator, value, value2)
         end
       end
 
@@ -230,12 +226,57 @@ module NewAdmin
     end
 
     def sanitized_filters
-      return {} unless params[:f].is_a?(ActionController::Parameters)
+      return [] unless params[:f].is_a?(ActionController::Parameters)
 
       valid_columns = @model_config.columns.map(&:name)
-      params[:f].to_unsafe_h.select do |key, _|
-        col_name = key.sub(/_from$|_to$/, "")
-        valid_columns.include?(col_name)
+      params[:f].values.filter_map do |rule|
+        next unless rule.is_a?(ActionController::Parameters)
+
+        col_name = rule[:c].to_s
+        next unless valid_columns.include?(col_name)
+
+        entry = { column: col_name, operator: rule[:o].to_s, value: rule[:v].to_s }
+        entry[:value2] = rule[:v2].to_s if rule[:v2].present?
+        entry
+      end
+    end
+
+    def apply_filter(scope, table, col_name, operator, value, value2)
+      case operator
+      when "contains"
+        scope.where("#{table}.#{col_name} LIKE ?", "%#{value}%")
+      when "not_contains"
+        scope.where.not("#{table}.#{col_name} LIKE ?", "%#{value}%")
+      when "is", "eq"
+        scope.where("#{table}.#{col_name}" => value)
+      when "starts_with"
+        scope.where("#{table}.#{col_name} LIKE ?", "#{value}%")
+      when "ends_with"
+        scope.where("#{table}.#{col_name} LIKE ?", "%#{value}")
+      when "lt"
+        scope.where("#{table}.#{col_name} < ?", value)
+      when "gt"
+        scope.where("#{table}.#{col_name} > ?", value)
+      when "between"
+        scope.where("#{table}.#{col_name} BETWEEN ? AND ?", value, value2)
+      when "true"
+        scope.where("#{table}.#{col_name}" => true)
+      when "false"
+        scope.where("#{table}.#{col_name}" => false)
+      when "today"
+        scope.where("#{table}.#{col_name}" => Date.current.all_day)
+      when "yesterday"
+        scope.where("#{table}.#{col_name}" => Date.yesterday.all_day)
+      when "this_week"
+        scope.where("#{table}.#{col_name}" => Date.current.beginning_of_week..Date.current.end_of_week)
+      when "last_week"
+        scope.where("#{table}.#{col_name}" => 1.week.ago.beginning_of_week..1.week.ago.end_of_week)
+      when "present"
+        scope.where.not("#{table}.#{col_name}" => [nil, ""])
+      when "blank"
+        scope.where("#{table}.#{col_name}" => [nil, ""])
+      else
+        scope
       end
     end
 

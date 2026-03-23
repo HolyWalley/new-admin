@@ -3,10 +3,11 @@ import Layout from "@/layouts/Layout";
 import { Link, router } from "@inertiajs/react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/DataTable";
+import { DataTable, serializeFilters } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
-import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterValues } from "@/types";
+import { FilterPanel } from "@/components/FilterPanel";
+import type { ModelMeta, RecordData, PaginationMeta, SortState, FilterRule } from "@/types";
 
 interface Props {
   model: ModelMeta;
@@ -14,7 +15,7 @@ interface Props {
   pagination: PaginationMeta;
   sort: SortState;
   search: string;
-  filters: FilterValues;
+  filters: FilterRule[];
 }
 
 function ResourceIndex({ model, records, pagination, sort, search, filters }: Props) {
@@ -29,20 +30,26 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
     });
   }
 
-  function handleFilterChange(newFilters: FilterValues) {
+  function handleFilterChange(newRules: FilterRule[]) {
     const params: Record<string, string> = {
       sort: sort.column,
       direction: sort.direction,
     };
     if (search) params.q = search;
-    Object.entries(newFilters).forEach(([key, val]) => {
-      if (val) params[`f[${key}]`] = val;
-    });
-    // Reset to page 1 when filters change
+    serializeFilters(params, newRules);
     router.get(`/new-admin/${model.param_key}`, params, {
       preserveState: true,
       preserveScroll: true,
     });
+  }
+
+  function handleCellFilter(column: string, operator: string, value: string) {
+    // Check if this exact filter already exists
+    const exists = filters.some(
+      (f) => f.column === column && f.operator === operator && f.value === value
+    );
+    if (exists) return;
+    handleFilterChange([...filters, { column, operator, value }]);
   }
 
   return (
@@ -64,11 +71,20 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
         </Link>
       </div>
 
-      <SearchBar
-        value={search}
-        modelParamKey={model.param_key}
-        sort={sort}
-        filters={filters}
+      <div className="flex items-start gap-4">
+        <SearchBar
+          value={search}
+          modelParamKey={model.param_key}
+          sort={sort}
+          filters={filters}
+        />
+      </div>
+
+      <FilterPanel
+        rules={filters}
+        columns={model.columns}
+        enums={model.enums}
+        onChange={handleFilterChange}
       />
 
       <DataTable
@@ -82,8 +98,7 @@ function ResourceIndex({ model, records, pagination, sort, search, filters }: Pr
         onSelectionChange={setSelectedIds}
         search={search}
         filters={filters}
-        onFilterChange={handleFilterChange}
-        enums={model.enums}
+        onCellFilter={handleCellFilter}
       />
 
       {selectedIds.size > 0 && (

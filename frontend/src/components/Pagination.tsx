@@ -1,14 +1,15 @@
 import { router } from "@inertiajs/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PaginationMeta, SortState, FilterValues } from "@/types";
+import { serializeFilters } from "@/components/DataTable";
+import type { PaginationMeta, SortState, FilterRule } from "@/types";
 
 interface PaginationProps {
   pagination: PaginationMeta;
   modelParamKey: string;
   sort: SortState;
   search?: string;
-  filters?: FilterValues;
+  filters?: FilterRule[];
 }
 
 export function Pagination({ pagination, modelParamKey, sort, search, filters }: PaginationProps) {
@@ -26,10 +27,8 @@ export function Pagination({ pagination, modelParamKey, sort, search, filters }:
       direction: sort.direction,
     };
     if (search) params.q = search;
-    if (filters) {
-      Object.entries(filters).forEach(([key, val]) => {
-        if (val) params[`f[${key}]`] = val;
-      });
+    if (filters && filters.length > 0) {
+      serializeFilters(params, filters);
     }
     router.get(
       `/new-admin/${modelParamKey}`,

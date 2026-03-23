@@ -116,7 +116,91 @@ export interface NestedFormConfigItem {
 
 export type NestedFormData = Record<string, Record<string, unknown> | Record<string, unknown>[]>;
 
-export type FilterValues = Record<string, string>;
+export interface FilterRule {
+  column: string;
+  operator: string;
+  value: string;
+  value2?: string;
+}
+
+export type ColumnType = ColumnDef["type"];
+
+export const FILTER_OPERATORS: Record<string, Array<{ key: string; label: string; unary?: boolean }>> = {
+  string: [
+    { key: "contains", label: "contains" },
+    { key: "not_contains", label: "doesn't contain" },
+    { key: "is", label: "is exactly" },
+    { key: "starts_with", label: "starts with" },
+    { key: "ends_with", label: "ends with" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  text: [
+    { key: "contains", label: "contains" },
+    { key: "not_contains", label: "doesn't contain" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  enum: [
+    { key: "is", label: "is" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  boolean: [
+    { key: "true", label: "is true", unary: true },
+    { key: "false", label: "is false", unary: true },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  integer: [
+    { key: "eq", label: "equals" },
+    { key: "lt", label: "less than" },
+    { key: "gt", label: "greater than" },
+    { key: "between", label: "between" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  decimal: [
+    { key: "eq", label: "equals" },
+    { key: "lt", label: "less than" },
+    { key: "gt", label: "greater than" },
+    { key: "between", label: "between" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  float: [
+    { key: "eq", label: "equals" },
+    { key: "lt", label: "less than" },
+    { key: "gt", label: "greater than" },
+    { key: "between", label: "between" },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  date: [
+    { key: "eq", label: "is" },
+    { key: "lt", label: "before" },
+    { key: "gt", label: "after" },
+    { key: "between", label: "between" },
+    { key: "today", label: "today", unary: true },
+    { key: "yesterday", label: "yesterday", unary: true },
+    { key: "this_week", label: "this week", unary: true },
+    { key: "last_week", label: "last week", unary: true },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+  datetime: [
+    { key: "eq", label: "is" },
+    { key: "lt", label: "before" },
+    { key: "gt", label: "after" },
+    { key: "between", label: "between" },
+    { key: "today", label: "today", unary: true },
+    { key: "yesterday", label: "yesterday", unary: true },
+    { key: "this_week", label: "this week", unary: true },
+    { key: "last_week", label: "last week", unary: true },
+    { key: "present", label: "is present", unary: true },
+    { key: "blank", label: "is blank", unary: true },
+  ],
+};
 
 export interface Flash {
   success?: string;
